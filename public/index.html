@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fish Online</title>
+    <link rel="stylesheet" type="text/css" href="/css/index.css">
 </head>
 <body>
     <h2>Welcome to Fish!</h2>
@@ -12,62 +13,9 @@
         <input class="join" type="button" value="Join Game">
         <input class="create" type="button" value="Create Game">
     </form>
-    <a href="/rules">Rules</a>
+    <a class="rules" href="/rules">Rules</a>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        
-
-        let id = sessionStorage.getItem('id');
-        let name;
-        let room;
-        sessionStorage.removeItem("room");
-        sessionStorage.removeItem("name");
-
-        const socket = io('/indexio');
-
-        socket.on('connect', ()=>{
-            console.log(`INDEX: connected to server with id: ${id}`);
-            if(id){
-                socket.emit('tellInfo', {id: id, name: name, room: room});
-            }else{
-                socket.emit('getID');
-            };
-        });
-
-        socket.on('setID', (id)=>{
-            console.log(`INDEX: set id to ${id}`);
-            sessionStorage.setItem('id', id);
-            socket.emit('tellInfo', {id: id});
-        });
-
-        $('.join').click(() =>{
-            let name = $('.name').val();
-            console.log(`INDEX: setting name to ${name}`);
-            let id=sessionStorage.getItem('id');
-            sessionStorage.setItem("name", name);
-            socket.emit('tellInfo', {name: name, id: id});
-            location.href = '/join';
-        });
-
-        $('.create').click(() =>{
-            let name = $('.name').val();
-            console.log(`INDEX: setting name to ${name}`);
-            let id=sessionStorage.getItem('id');
-            sessionStorage.setItem("name", name);
-
-            let room  = '';
-            let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            for (let i = 0; i < 4; i++ ) {
-                room += characters.charAt(Math.floor(Math.random() * characters.length));
-            };
-
-            socket.emit('tellInfo', {name: name, id: id, room: room});
-            console.log(`INDEX: creating room ${room}`);
-            sessionStorage.setItem("room", room);
-            socket.emit('createRoom', {name: name, id: id, room: room});
-            location.href = '/'+room;
-        });
-    </script>
+    <script src="/js/index.js"></script>
 </body>
 </html>

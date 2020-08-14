@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fish Online</title>
+    <link rel="stylesheet" type="text/css" href="/css/join.css">
 </head>
 <body>
     <h2>Welcome</h2>
@@ -13,44 +14,6 @@
     </form>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        
-        let id = sessionStorage.getItem('id');
-        let name=sessionStorage.getItem('name'); 
-        sessionStorage.removeItem("room");
-
-        //writes welcome user at the top
-        document.querySelector("h2").innerHTML=("Welcome, "+ name+"!");
-
-        const socket = io('/joinio');
-
-        socket.on('connect', ()=>{
-            socket.emit('tellInfo', {id: id, name: name});
-            if(!id || !name){
-                sessionStorage.clear();
-                location.href = '/';
-            }else{
-                console.log(`JOIN: connected to server with id: ${id} and name ${name}`);
-            };
-            
-        });
-
-        $('.join').click(() =>{
-            let room = $('.room').val().toUpperCase();
-            console.log(`JOIN: requesting to enter ${room}`);
-            let id=sessionStorage.getItem('id');
-            let name=sessionStorage.getItem('name');
-            socket.emit('requestJoin', {name: name, id: id, room: room});
-            socket.on('requestAns', (ans)=>{
-                if(ans){
-                    sessionStorage.setItem('room', room);
-                    location.href ='/'+room;
-                }else{
-                    console.log(`JOIN: request to join ${room} denied`);
-                };
-            });
-        });
-
-    </script>
+    <script src="/js/join.js"></script>
 </body>
 </html>

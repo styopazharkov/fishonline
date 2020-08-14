@@ -5,13 +5,23 @@ const io = require('socket.io')(server);
 const port = 3000;
 
 let rooms = new Map();
-let hosts = new Map();
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 server.listen(port, () => {
     console.log(`Server is running on port ${port}.`);
+});
+
+//route to all css files
+app.get('/css/:file', (req, res) =>{ 
+    let file=req.params.file;
+    res.sendFile(__dirname + '/public/css/'+file);
+});
+
+//route to all js files
+app.get('/js/:file', (req, res) =>{ 
+    let file=req.params.file;
+    res.sendFile(__dirname + '/public/js/'+file);
 });
 
 //main page of the site
@@ -62,12 +72,13 @@ indexio.on('connection', (socket) => {
 
     socket.on('createRoom', (data)=>{
         console.log(`INDEXIO: room ${data.room} created by ${data.id}, name: ${data.name}`);
-        rooms.set(data.room, {room: data.room, host: data.id, players:[(data.id, data.name)], team1: [(data.id,data.name)], team2: [], spectators: [], turn: null, cards: null});
-        hosts.set(data.id, data.room);
+        let nameMap = new Map();
+        nameMap.set(data.id, data.name);
+        rooms.set(data.room, {connected: new Set(), nameMap: nameMap, room: data.room, host: data.id, players:[data.id], team1: [data.id], team2: [], spectators: [], turn: null, cards: null});
     });
 
     socket.on('disconnect', () => {
-        console.log(`INDEXIO: user ${id}, ${name}, ${room} disconnected. ${rooms.size}, ${hosts.size}`);
+        console.log(`INDEXIO: user ${id}, ${name}, ${room} disconnected. ${rooms.size}`);
     });
 })
 
@@ -91,8 +102,9 @@ joinio.on('connection', (socket) => {
         if(rooms.has(data.room)){
             console.log(`JOINIO: room ${data.room} approved to ${data.id, data.name}`);
             let game = rooms.get(data.room);
-            game.players.push((data.id, data.name));
-            game.team1.push((data.id, data.name));
+            game.players.push(data.id);
+            game.team1.push(data.id);
+            game.nameMap.set(data.id, data.name)
             room = data.room
             socket.emit('requestAns', true);
         }else{
@@ -102,14 +114,14 @@ joinio.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`JOINIO: user ${id}, ${name}, ${room}  disconnected. ${rooms.size}, ${hosts.size}`);
+        console.log(`JOINIO: user ${id}, ${name}, ${room}  disconnected. ${rooms.size}, `);
     });
 })
 
 // ############ ROOMIO
 const roomio = io.of('/roomio');
 roomio.on('connection', (socket) => {
-    console.log(`ROOMIO: user joined`);
+    console.log(`ROOMIO:  user joined`);
     var id;
     var name;
     var room;
@@ -118,21 +130,28 @@ roomio.on('connection', (socket) => {
         id = data.id;
         name = data.name;
         room = data.room;
-        console.log(`ROOMIO: user gave info: id: ${id}, name: ${name}, room: ${room}`);
+        console.log(`ROOMIO:  user gave info: id: ${id}, name: ${name}, room: ${room}`);
 
         if(rooms.has(room)){
-            let game=rooms.get(data.room)
-            if(game.players.includes((id, name))){
-                socket.join(data.room);
+            let game=rooms.get(room);
+            if(game.players.includes(id)){
+                socket.join(room);
+                game.connected.add(id);
                 if (game.host===id){
-                    console.log(`ROOMIO: user id: ${id}, name: ${name} admitted to room: ${room} as host`);
+                    console.log(`ROOMIO:  user id: ${id}, name: ${name} admitted to room: ${room} as host`);
                     socket.emit('requestAns', {ans: true, host: true});
+                    //socket.io cant emit maps so we convert it to a string and then back
+                    let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                    roomio.in(room).emit('updatePlayers', {players: game.players, host: game.host, transitMapString: transitMapString})
                 }else{
-                    console.log(`ROOMIO: user id: ${id}, name: ${name} admitted to room: ${room}`);
+                    console.log(`ROOMIO:  user id: ${id}, name: ${name} admitted to room: ${room}`);
                     socket.emit('requestAns', {ans: true, host: false});
+                    //socket.io cant emit maps so we convert it to a string and then back
+                    let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                    roomio.in(room).emit('updatePlayers', {players: game.players, host: game.host, transitMapString: transitMapString})
                 }
             }else{
-                socket.emit('requestAns', {ans: false, msg: "not in players"});
+                socket.emit('requestAns', {ans: false, msg: `${id} not in players: ${game.players}`});
             };
         }else{
             socket.emit('requestAns', {ans: false, msg: "no such game"});
@@ -140,10 +159,24 @@ roomio.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        // if (hosts.has(id)){
-        //     rooms.delete(hosts.get(id));
-        //     hosts.delete(id);
-        // };
-        console.log(`ROOMIO: user ${id} disconnected from room ${rooms.size}, ${hosts.size}`);
+        if(rooms.has(room)){
+            let game=rooms.get(room);
+            game.connected.delete(id);
+            setTimeout(()=>{
+                //makes it so that people can reload without losing progress. they have 2 seconds
+                if(game.connected.has(id)){
+                    console.log(`ROOMIO: ${id} came back`);
+                } else{
+                    if(game.host===id){
+                        //change host
+                        //if no one to change to:
+                        rooms.delete(room);
+                        console.log(`ROOMIO: ${id} actually left`);
+                    }
+                    // tell people that someone left
+                };
+            }, 2000);
+        };
+        console.log(`ROOMIO: user ${id} disconnected from room ${rooms.size}`);
     });
 })

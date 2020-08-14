@@ -1,7 +1,7 @@
 {
   "name": "fishonline",
-  "version": "1.0.0",
-  "description": "an online version of fish",
+  "version": "1.1.0",
+  "description": "an online version of fish, the six player game",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
