@@ -37,9 +37,9 @@ socket.on('updatePlayers', (data)=>{
     str+='<br> team1: '+JSON.stringify(data.team1); // make this neater
     str+='<br> team2: '+JSON.stringify(data.team2);
     str+='<br> spectators: '+JSON.stringify(data.spectators);
-    document.querySelector(".players").innerHTML=str;
+    $(".players").html(str);
 
-    if(data.players.length>=2 && host===id){
+    if(data.players.length>=6 && host===id){
         $(".startButton").removeAttr('hidden');
         $(".startButton").removeAttr('disabled');
     }else if(!$(".startButton").attr('disabled')){
@@ -49,6 +49,21 @@ socket.on('updatePlayers', (data)=>{
     
 });
 
+socket.on('gameStarted', (data)=>{
+    if(!$(".startButton").attr('disabled')){
+        $(".startButton").attr('disabled', true);
+        $(".startButton").attr('hidden', true);
+    };
+    //draw table
+    $(".table").html('<br> table:'+JSON.stringify(data.table)); //socket cant emit maps
+    if(data.players.includes(id)){
+        socket.emit('getCards', {room: room, id:id})
+    }
+});
+
+socket.on('updateCards', (data)=>{
+    $(".cards").html('<br> cards:'+JSON.stringify(data.cards));
+});
 
 $('.startButton').click(() =>{
     console.log(`ROOM: game started`)

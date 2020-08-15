@@ -89,9 +89,10 @@ indexio.on('connection', (socket) => {
             team2: [], 
             spectators: [], 
             turn: 1, 
-            cards: null,
+            cards: [[],[],[],[],[],[]],
             started: false,
             table: null,
+            cotable: null,
             score1: 0,
             score2: 0
             }
@@ -187,17 +188,62 @@ roomio.on('connection', (socket) => {
     socket.on('startGame',(data) =>{
         console.log(`start game requested by ${data.id} in room ${data.room}`)
         let game = rooms.get(data.room);
-        if(game.host===data.id && game.players.length>=6){
-            //make sure that every player is connected
-            //make table
-            let table = new Map();
+        //verification of host and player number
+        if(game.host===id && id===data.id && game.players.length>=6){
+            //make sure that every player is connected, maybe just send back to lobby if game is stopped and not enough players
+
+            //make table and cotable
+            game.started=true;
+            let table = new Map(), cotable = new Map();
+            let firstTeam=Math.floor((Math.random() * 2)); //variable decides if team1 is first
+            let secondTeam=(firstTeam+1)%2; //opposite of firstteam
+            let numbers=[0,2,4];
+            let counter=0;
+            while(numbers.length>0){ //makes table and cotable for team1
+                let spot=numbers.splice(Math.floor(Math.random() * numbers.length),1)[0]+firstTeam; //selects random seat
+                table.set(spot, game.team1[counter]);
+                cotable.set(game.team1[counter], spot);
+                counter++;
+            };
+            numbers=[0,2,4];
+            counter=0;
+            while(numbers.length>0){ //makes table and cotable for team2
+                let spot=numbers.splice(Math.floor(Math.random() * numbers.length),1)[0]+secondTeam; //selects random seat
+                table.set(spot, game.team2[counter]);
+                cotable.set(game.team2[counter], spot);
+                counter++;
+            };
+            game.table=table;
+            game.cotable=cotable;
 
             //deal cards
+            let gamecards=[]; 
+            for (let i = 0; i < 9; i++){
+                for(let j = 0; j < 6; j++){
+                    gamecards.push({halfsuit: i, value: j}); //makes deck
+                }
+            }
+            counter=0;
+            while(gamecards.length>0){
+                let randomCard=gamecards.splice(Math.floor(Math.random() * gamecards.length),1)[0]; //select random card 
+                game.cards[counter].push(randomCard); // deals the cards in a circle
+                counter = (counter+1)%6;
+            }
+            console.log(`ROOMIO: table made in room ${room}: ${JSON.stringify(game.table)}, cards dealt: ${JSON.stringify(game.cards)}`);
 
-            //send out update
+            //tell players to ask for their cards
+            roomio.in(room).emit('gameStarted', {players: game.players, table: game.table}); //table should be converted before emiting because socketio cant emit maps
         }else{
             //tell host why game start failed
-            console.log(`game start failed: not host or not enough players`)
+            console.log(`game start failed: not host or not enough players host: ${game.host}, id: ${id}, data.id: ${data.id}, numplayers: ${game.players.length}`)
+        }
+    });
+
+    socket.on('getCards', (data) => {
+        if(data.id===id && data.room===room){
+            console.log(`ROOMIO: user ${id} has requested cards`);
+            let game=rooms.get(room);
+            socket.emit('updateCards', {cards:game.cards[game.cotable.get(id)]}) //should also update the turn and possmoves and table
         }
     });
 
@@ -206,10 +252,10 @@ roomio.on('connection', (socket) => {
             let game=rooms.get(room);
             game.connected.delete(id);
             setTimeout(()=>{
-                //makes it so that people can reload without losing progress. they have 2 seconds
+                //makes it so that people can reload without losing progress. they have 2 seconds 
                 if(game.connected.has(id)){
                     console.log(`ROOMIO: ${id} came back`);
-                } else{
+                } else if(!game.started){ //if game hasnt started
                     if(game.host===id){
                         if(game.players.length>0){
                             game.players.splice(game.players.indexOf(id),1);
@@ -234,10 +280,13 @@ roomio.on('connection', (socket) => {
                         let transitMapString = JSON.stringify(Array.from(game.nameMap));
                         roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
                     }
+                }else{ //if game has started
+                    //restart the game and wait for players. move any spectators down to player. let people know who left. check for host
+                    console.log(`ROOMIO: ${id} actually left during game`);
                 };
-            }, 1000);
+            }, 2000);
         };
-        console.log(`ROOMIO: user ${id} disconnected from room ${rooms.size}`);
+        console.log(`ROOMIO: user ${id} disconnected from room. There are ${rooms.size} active rooms.`);
     });
 })
 
