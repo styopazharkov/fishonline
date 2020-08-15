@@ -27,6 +27,7 @@ socket.on('setID', (id)=>{
 $('.join').click(() =>{
     let name = $('.name').val();
     console.log(`INDEX: setting name to ${name}`);
+    //check that name is valid
     let id=sessionStorage.getItem('id');
     sessionStorage.setItem("name", name);
     socket.emit('tellInfo', {name: name, id: id});
@@ -36,6 +37,7 @@ $('.join').click(() =>{
 $('.create').click(() =>{
     let name = $('.name').val();
     console.log(`INDEX: setting name to ${name}`);
+    //check that name is valid
     let id=sessionStorage.getItem('id');
     sessionStorage.setItem("name", name);
 

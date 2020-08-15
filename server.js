@@ -18,6 +18,11 @@ app.get('/css/:file', (req, res) =>{
     res.sendFile(__dirname + '/public/css/'+file);
 });
 
+app.get('/css/fonts/:file', (req, res) =>{ 
+    let file=req.params.file;
+    res.sendFile(__dirname + '/public/css/fonts/'+file);
+});
+
 //route to all js files
 app.get('/js/:file', (req, res) =>{ 
     let file=req.params.file;
@@ -74,7 +79,23 @@ indexio.on('connection', (socket) => {
         console.log(`INDEXIO: room ${data.room} created by ${data.id}, name: ${data.name}`);
         let nameMap = new Map();
         nameMap.set(data.id, data.name);
-        rooms.set(data.room, {connected: new Set(), nameMap: nameMap, room: data.room, host: data.id, players:[data.id], team1: [data.id], team2: [], spectators: [], turn: null, cards: null});
+        rooms.set(data.room, 
+            {connected: new Set(), 
+            nameMap: nameMap, 
+            room: data.room, 
+            host: data.id, 
+            players:[data.id], 
+            team1: [data.id], 
+            team2: [], 
+            spectators: [], 
+            turn: 1, 
+            cards: null,
+            started: false,
+            table: null,
+            score1: 0,
+            score2: 0
+            }
+        );
     });
 
     socket.on('disconnect', () => {
@@ -101,15 +122,20 @@ joinio.on('connection', (socket) => {
         // insert to let user know that this isnt a room
         if(rooms.has(data.room)){
             console.log(`JOINIO: room ${data.room} approved to ${data.id, data.name}`);
-            let game = rooms.get(data.room);
-            game.players.push(data.id);
-            game.team1.push(data.id);
-            game.nameMap.set(data.id, data.name)
             room = data.room
-            socket.emit('requestAns', true);
+            let game=rooms.get(room);
+            game.players.push(data.id);
+            if(game.team1.length<3){
+                game.team1.push(data.id);
+            }else if(game.team2.length<3){
+                game.team2.push(data.id);
+            }else{
+                game.spectators.push(data.id)
+            };
+            socket.emit('requestAns', true); //make the data an object
         }else{
             console.log(`JOINIO: room ${data.room} denied to ${data.id, data.name}`);
-            socket.emit('requestAns', false);
+            socket.emit('requestAns', false); //make the data an object
         };
     });
 
@@ -136,26 +162,43 @@ roomio.on('connection', (socket) => {
             let game=rooms.get(room);
             if(game.players.includes(id)){
                 socket.join(room);
+
                 game.connected.add(id);
+                game.nameMap.set(data.id, data.name);
                 if (game.host===id){
                     console.log(`ROOMIO:  user id: ${id}, name: ${name} admitted to room: ${room} as host`);
-                    socket.emit('requestAns', {ans: true, host: true});
-                    //socket.io cant emit maps so we convert it to a string and then back
-                    let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                    roomio.in(room).emit('updatePlayers', {players: game.players, host: game.host, transitMapString: transitMapString})
+                    socket.emit('requestAns', {ans: true});
                 }else{
                     console.log(`ROOMIO:  user id: ${id}, name: ${name} admitted to room: ${room}`);
-                    socket.emit('requestAns', {ans: true, host: false});
-                    //socket.io cant emit maps so we convert it to a string and then back
-                    let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                    roomio.in(room).emit('updatePlayers', {players: game.players, host: game.host, transitMapString: transitMapString})
-                }
+                    socket.emit('requestAns', {ans: true});
+                };
+
+                //socket.io cant emit maps so we convert it to a string and then back
+                let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
             }else{
                 socket.emit('requestAns', {ans: false, msg: `${id} not in players: ${game.players}`});
             };
         }else{
             socket.emit('requestAns', {ans: false, msg: "no such game"});
         };
+    });
+
+    socket.on('startGame',(data) =>{
+        console.log(`start game requested by ${data.id} in room ${data.room}`)
+        let game = rooms.get(data.room);
+        if(game.host===data.id && game.players.length>=6){
+            //make sure that every player is connected
+            //make table
+            let table = new Map();
+
+            //deal cards
+
+            //send out update
+        }else{
+            //tell host why game start failed
+            console.log(`game start failed: not host or not enough players`)
+        }
     });
 
     socket.on('disconnect', () => {
@@ -168,15 +211,35 @@ roomio.on('connection', (socket) => {
                     console.log(`ROOMIO: ${id} came back`);
                 } else{
                     if(game.host===id){
-                        //change host
-                        //if no one to change to:
-                        rooms.delete(room);
+                        if(game.players.length>0){
+                            game.players.splice(game.players.indexOf(id),1);
+                            if (game.team1.includes(id)) game.team1.splice(game.team1.indexOf(id),1);
+                            if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
+                            if (game.spectators.includes(id)) game.spectators.splice(game.spectators.indexOf(id),1);
+                            game.host=game.players[0]
+                            console.log(`ROOMIO: ${id} (the host) actually left, ${game.host} is the new host`);
+                            let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                            roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
+                        }else{
+                            rooms.delete(room);
+                            console.log(`ROOMIO: ${id} (the host) actually left, room ${room} deleted`);
+                        };
+                    } else{
+                        game.players.splice(game.players.indexOf(id),1);
                         console.log(`ROOMIO: ${id} actually left`);
+                        game.nameMap.delete(id);
+                        if (game.team1.includes(id)) game.team1.splice(game.team1.indexOf(id),1);
+                        if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
+                        if (game.spectators.includes(id)) game.spectators.splice(game.spectators.indexOf(id),1);
+                        let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                        roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
                     }
-                    // tell people that someone left
                 };
-            }, 2000);
+            }, 1000);
         };
         console.log(`ROOMIO: user ${id} disconnected from room ${rooms.size}`);
     });
 })
+
+
+//TODO: make console logs better
