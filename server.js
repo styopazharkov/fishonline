@@ -88,7 +88,7 @@ indexio.on('connection', (socket) => {
             team1: [data.id], 
             team2: [], 
             spectators: [], 
-            turn: 1, 
+            turn: 0, 
             cards: [[],[],[],[],[],[]],
             started: false,
             table: null,
@@ -177,6 +177,8 @@ roomio.on('connection', (socket) => {
                 //socket.io cant emit maps so we convert it to a string and then back
                 let transitMapString = JSON.stringify(Array.from(game.nameMap));
                 roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
+
+                //if game has started, emit updatecards
             }else{
                 socket.emit('requestAns', {ans: false, msg: `${id} not in players: ${game.players}`});
             };
@@ -243,7 +245,64 @@ roomio.on('connection', (socket) => {
         if(data.id===id && data.room===room){
             console.log(`ROOMIO: user ${id} has requested cards`);
             let game=rooms.get(room);
-            socket.emit('updateCards', {cards:game.cards[game.cotable.get(id)]}) //should also update the turn and possmoves and table
+            let update;
+            let turnid = game.table.get(game.turn);
+            if(id===turnid){
+
+                //makes possPeople to ask and possCards to ask for
+                let possPeople=[]; //people you can ask
+                let enemyTeam = (game.cotable.get(id)+1)%2;
+                [enemyTeam, enemyTeam+2, enemyTeam+4].forEach(elem=>{
+                    if(game.cards[elem].length>0) possPeople.push(game.table.get(elem));
+                });
+
+                let possCards=[]; //cards you can ask for
+                let cards=game.cards[game.cotable.get(id)];
+                let possHalfsuits=[];
+                cards.forEach(elem=>{
+                    if (!possHalfsuits.includes(elem.halfsuit)) possHalfsuits.push(elem.halfsuit);
+                });
+                possHalfsuits.forEach(elem=>{
+                    [0,1,2,3,4,5].forEach(val=>{
+                        possCards.push({halfsuit: elem, value: val});
+                    })
+                })
+                console.log(`posspeople: ${possPeople}, possCards: ${possCards}`);
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards}
+            }else{
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid}
+            }
+            socket.emit('updateCards', update); //should also update the turn and possmoves and table
+        }
+    });
+
+    socket.on('makeMove', (data)=>{
+        if(data.id===id){
+            let game=rooms.get(room);
+            let targetCards=game.cards[game.cotable.get(data.target)];
+            console.log(`${JSON.stringify(targetCards)}, ${JSON.stringify(data.card)}`)
+
+            let match=false; //need this because objects cant be compared with ===
+            let targetCard
+            targetCards.forEach(item => {
+                if(item.halfsuit===data.card.halfsuit && item.value===data.card.value){
+                    match = true;
+                    targetCard=item;
+                } 
+            })
+
+            if(match){
+                console.log(`ROOMIO: ${id} asked ${data.target} for ${JSON.stringify(data.card)} and got it`);
+                game.cards[game.cotable.get(id)].push(data.card);// adds card to players hand
+                targetCards.splice(targetCards.indexOf(targetCard),1); //removes card from targets hand
+                roomio.in(room).emit('moveMade', {mover: id, target: data.target, card: data.card, success: true});
+            }else{
+                console.log(`ROOMIO: ${id} asked ${data.target} for ${JSON.stringify(data.card)} but didn't get it`);
+                game.turn=game.cotable.get(data.target);
+                roomio.in(room).emit('moveMade', {mover: id, target: data.target, card: data.card, success: false});
+            }
+        }else{
+            console.log(`ROOMIO: IDs do not match`);
         }
     });
 

@@ -3,9 +3,65 @@ let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name');
 let host;
 //writes to page
-document.querySelector("h2").innerHTML=( room );
-document.querySelector("h3").innerHTML=(`id: ${id}, name: ${name}`);
+$("h2").html( room ); //ugly
+$("h3").html(`id: ${id}, name: ${name}`); //ugly
 
+//buttons: 
+let startButton = $("<button>", { //button to start game
+    text: 'Start Game',
+    class: 'startButton',
+    click: () => {
+        console.log(`ROOM: game started`)
+        socket.emit('startGame', {id: id, room: room})
+    }
+})
+
+let makePossPeopleDropdown = (possPeople)=>{ //dropdown to select person to ask. ugly
+    let possPeopleDropdown=$('<select>',{
+        class: 'possPeopleDropdown'
+    })
+    possPeople.forEach((item)=>{
+        let poss=$('<option>', {
+            value: item,
+            text: item
+        });
+        possPeopleDropdown.append(poss);
+    })
+    return possPeopleDropdown;
+}
+
+let makePossCardsDropdown = (possCards)=>{ //dropdown to select card to ask for. ugly
+    let possCardsDropdown=$('<select>',{
+        class: 'possCardsDropdown'
+    })
+    possCards.forEach((item)=>{
+        let poss=$('<option>', {
+            text: JSON.stringify(item),
+            value: item.halfsuit.toString()+item.value.toString()
+        });
+        possCardsDropdown.append(poss);
+    });
+    return possCardsDropdown;
+}
+
+let makeMoveForm = (possPeople, possCards) => { //actually a div so i should rename
+    let moveForm = $('<div>', {
+        class: 'moveForm',
+    });
+    moveForm.append(makePossPeopleDropdown(possPeople));
+    moveForm.append(makePossCardsDropdown(possCards));
+    let submitButton = $('<button>',{
+        text: 'Make Move',
+        click: ()=>{
+            console.log()
+            socket.emit('makeMove', {id: id, target: $('.possPeopleDropdown').val(), card: {halfsuit: Number($('.possCardsDropdown').val()[0]), value: Number($('.possCardsDropdown').val()[1])}})
+        }
+    });
+    moveForm.append(submitButton);
+    return moveForm
+}
+
+//socketing
 const socket = io('/roomio');
 
 socket.on('connect', ()=>{
@@ -39,20 +95,17 @@ socket.on('updatePlayers', (data)=>{
     str+='<br> spectators: '+JSON.stringify(data.spectators);
     $(".players").html(str);
 
-    if(data.players.length>=6 && host===id){
-        $(".startButton").removeAttr('hidden');
-        $(".startButton").removeAttr('disabled');
-    }else if(!$(".startButton").attr('disabled')){
-        $(".startButton").attr('disabled', true);
-        $(".startButton").attr('hidden', true);
+    if(data.players.length>=6 && host===id){ //only if game has started
+        $('.startButtonDiv').append(startButton);
+    }else if($(".startButton")){
+        $(".startButton").remove();
     };
     
 });
 
 socket.on('gameStarted', (data)=>{
-    if(!$(".startButton").attr('disabled')){
-        $(".startButton").attr('disabled', true);
-        $(".startButton").attr('hidden', true);
+    if($(".startButton")){
+        $(".startButton").remove();
     };
     //draw table
     $(".table").html('<br> table:'+JSON.stringify(data.table)); //socket cant emit maps
@@ -61,11 +114,24 @@ socket.on('gameStarted', (data)=>{
     }
 });
 
-socket.on('updateCards', (data)=>{
+socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need to fix
     $(".cards").html('<br> cards:'+JSON.stringify(data.cards));
+    console.log(`data: ${data.turnid}, id: ${id}`);
+    if ($('.moveForm')){
+        $('.moveForm').remove();
+    }
+    if(data.turnid===id){
+        console.log(`ROOM: making move form`);
+        $('.moveFormDiv').append(makeMoveForm(data.possPeople, data.possCards));
+    }
 });
 
-$('.startButton').click(() =>{
-    console.log(`ROOM: game started`)
-    socket.emit('startGame', {id: id, room: room})
+socket.on('moveMade',(data)=>{
+    if (data.success){
+        $('.pastMove').html(`${data.mover} took ${JSON.stringify(data.card)} from ${data.target}`);
+    } else{
+        $('.pastMove').html(`${data.mover} didn't take ${JSON.stringify(data.card)} from ${data.target}`);
+    }
+    socket.emit('getCards', {room: room, id:id});
 });
+
