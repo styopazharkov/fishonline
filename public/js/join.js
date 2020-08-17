@@ -3,7 +3,7 @@ let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name'); 
 
 //writes welcome user at the top
-document.querySelector("h2").innerHTML=("Welcome, "+ name+"!");
+$(".welcome").html("Welcome, "+ name+"!");
 
 const socket = io('/joinio');
 
@@ -18,7 +18,7 @@ socket.on('connect', ()=>{
     
 });
 
-$('.join').click(() =>{
+$('.join').click(() =>{ //check that room chars are valid and not empty
     let room = $('.room').val().toUpperCase();
     console.log(`JOIN: requesting to enter ${room}`);
     let id=sessionStorage.getItem('id');

@@ -7,11 +7,28 @@
     <link rel="stylesheet" type="text/css" href="/css/join.css">
 </head>
 <body>
-    <h2>Welcome</h2>
-    <form method="GET">
-        <input class="room" name="room" type="text" placeholder="Enter room code">
-        <input class="join" type="button" value="Join">
-    </form>
+
+    <div class="backDiv">
+        <!-- insert back button here -->
+    </div>
+
+    <div class="grid">
+        <div class="welcomeDiv">
+            <h2 class="welcome">Welcome</h2>
+        </div>
+        <div class="roomDiv">
+            <input class="room" name="room" type="text" placeholder="Enter room code">
+        </div>
+        <div class="joinDiv">
+            <input class="join" type="button" value="Join Room">
+        </div>
+    </div>
+
+    <div class="creditsDiv">
+        <a class="credits" href="/credits">credits</a>
+    </div>
+
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/join.js"></script>

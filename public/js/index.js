@@ -26,35 +26,37 @@ socket.on('setID', (id)=>{
 
 $('.join').click(() =>{
     let name = $('.name').val();
-    console.log(`INDEX: setting name to ${name}`);
-    //check that name is valid
-    let id=sessionStorage.getItem('id');
-    sessionStorage.setItem("name", name);
-    socket.emit('tellInfo', {name: name, id: id});
-    location.href = '/join';
+    if(name){ //check that all chars are good too
+        console.log(`INDEX: setting name to ${name}`);
+        let id=sessionStorage.getItem('id');
+        sessionStorage.setItem("name", name);
+        socket.emit('tellInfo', {name: name, id: id});
+        location.href = '/join';
+    } //add elese statement to tell user why name doesnt work
 });
 
 $('.create').click(() =>{
     let name = $('.name').val();
-    console.log(`INDEX: setting name to ${name}`);
-    //check that name is valid
-    let id=sessionStorage.getItem('id');
-    sessionStorage.setItem("name", name);
-
-    let room  = '';
-    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (let i = 0; i < 4; i++ ) {
-        room += characters.charAt(Math.floor(Math.random() * characters.length));
-    };
-
-    socket.emit('tellInfo', {name: name, id: id, room: room});
-    console.log(`INDEX: creating room ${room}`);
-    sessionStorage.setItem("room", room);
-    if(room && name && id){
-        socket.emit('createRoom', {name: name, id: id, room: room});
-        location.href = '/'+room;
-    }else{
-        location.href = '/';
-    }
-
+    if(name){//check that all chars are good too
+        console.log(`INDEX: setting name to ${name}`);
+        //check that name is valid
+        let id=sessionStorage.getItem('id');
+        sessionStorage.setItem("name", name);
+    
+        let room  = '';
+        let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (let i = 0; i < 4; i++ ) {
+            room += characters.charAt(Math.floor(Math.random() * characters.length));
+        };
+    
+        socket.emit('tellInfo', {name: name, id: id, room: room});
+        console.log(`INDEX: creating room ${room}`);
+        sessionStorage.setItem("room", room);
+        if(room && name && id){
+            socket.emit('createRoom', {name: name, id: id, room: room});
+            location.href = '/'+room;
+        }else{
+            location.href = '/';
+        }
+    } //add elese statement to tell user why name doesnt work
 });

@@ -39,6 +39,14 @@ app.get('/join', (req, res) =>{
     res.sendFile(__dirname + '/public/join.html');
 });
 
+app.get('/rules', (req, res) =>{
+    res.sendFile(__dirname + '/public/rules.html');
+});
+
+app.get('/favicon.ico', (req, res)=>{
+    res.sendFile(__dirname + '/public/img/favicon.ico');
+});
+
 app.get('/:room', (req, res) =>{ 
     let room=req.params.room;
     if(rooms.has(room)){
@@ -93,6 +101,7 @@ indexio.on('connection', (socket) => {
             started: false,
             table: null,
             cotable: null,
+            halfsuits: [0,1,2,3,4,5,6,7,8],
             score1: 0,
             score2: 0
             }
@@ -246,6 +255,12 @@ roomio.on('connection', (socket) => {
             console.log(`ROOMIO: user ${id} has requested cards`);
             let game=rooms.get(room);
             let update;
+            let counter=0;
+            while(game.cards[game.turn].length===0 && counter<3){//passes move on to next player
+                console.log(`TEST: ${game.turn} passing move on`)
+                game.turn=(game.turn+2)%6;
+                counter++; //if counter reaches 3, the team has no cards so server should emit 'declare phase' with no moves.
+            }
             let turnid = game.table.get(game.turn);
             if(id===turnid){
 
@@ -268,9 +283,20 @@ roomio.on('connection', (socket) => {
                     })
                 })
                 console.log(`posspeople: ${possPeople}, possCards: ${possCards}`);
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards}
+
+                let friendTeam = (game.cotable.get(id))%2;
+                let friends=[];
+                [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
+                   friends.push(game.table.get(item))
+                });
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards, halfsuits: game.halfsuits, team: friends}
             }else{
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid}
+                let friendTeam = (game.cotable.get(id))%2;
+                let friends=[];
+                [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
+                   friends.push(game.table.get(item))
+                });
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, halfsuits: game.halfsuits, team: friends}
             }
             socket.emit('updateCards', update); //should also update the turn and possmoves and table
         }
@@ -283,7 +309,7 @@ roomio.on('connection', (socket) => {
             console.log(`${JSON.stringify(targetCards)}, ${JSON.stringify(data.card)}`)
 
             let match=false; //need this because objects cant be compared with ===
-            let targetCard
+            let targetCard;
             targetCards.forEach(item => {
                 if(item.halfsuit===data.card.halfsuit && item.value===data.card.value){
                     match = true;
@@ -306,6 +332,41 @@ roomio.on('connection', (socket) => {
         }
     });
 
+    socket.on('declare', (data)=>{
+        if(data.id===id){
+            let game=rooms.get(room);
+            let success=true; //is this a successful declaration 
+            [0,1,2,3,4,5].forEach((item)=>{
+                let targetCards=game.cards[game.cotable.get(data.cardHolders[item])]
+                let match=false;
+                targetCards.forEach(itm=>{
+                    if(itm.halfsuit===data.halfsuit && itm.value===item) match = true;
+                })
+                if(!match){
+                    success=false;
+                } 
+            })
+            if(success){
+                if(game.team1.includes(id)) {game.score1++;} else {game.score2++;}
+            }else{
+                if(game.team1.includes(id)) {game.score2++;} else {game.score1++;}
+            }
+            console.log(`ROOMIO: ${id} unsuccessfully declared ${data.halfsuit}`);
+            for(let i=0; i < 6; i++){
+                let temp=game.cards[i];
+                game.cards[i]=temp.filter((item)=>{return item.halfsuit!==data.halfsuit;});
+            }
+            game.halfsuits.splice(game.halfsuits.indexOf(data.halfsuit), 1);
+
+            roomio.in(room).emit('declared', {declarer: id, halfsuit: data.halfsuit, success: success});
+            
+            if(game.halfsuits.length===0){ //if game is over
+                roomio.in(room).emit('gameOver'); //add winner, scores, etc.
+            }
+        }else{
+            console.log(`ROOMIO: IDs do not match`);
+        }
+    });
     socket.on('disconnect', () => {
         if(rooms.has(room)){
             let game=rooms.get(room);
@@ -316,7 +377,7 @@ roomio.on('connection', (socket) => {
                     console.log(`ROOMIO: ${id} came back`);
                 } else if(!game.started){ //if game hasnt started
                     if(game.host===id){
-                        if(game.players.length>0){
+                        if(game.players.length>1){
                             game.players.splice(game.players.indexOf(id),1);
                             if (game.team1.includes(id)) game.team1.splice(game.team1.indexOf(id),1);
                             if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
@@ -345,9 +406,9 @@ roomio.on('connection', (socket) => {
                 };
             }, 2000);
         };
-        console.log(`ROOMIO: user ${id} disconnected from room. There are ${rooms.size} active rooms.`);
+        console.log(`ROOMIO: user ${id} disconnected from room. active rooms: [insert active rooms here]`);
     });
 })
 
 
-//TODO: make console logs better
+//TODO: make console logs better, check correct declaration, pass on move if no moves

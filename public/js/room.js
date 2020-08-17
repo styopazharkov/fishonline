@@ -53,12 +53,63 @@ let makeMoveForm = (possPeople, possCards) => { //actually a div so i should ren
     let submitButton = $('<button>',{
         text: 'Make Move',
         click: ()=>{
-            console.log()
             socket.emit('makeMove', {id: id, target: $('.possPeopleDropdown').val(), card: {halfsuit: Number($('.possCardsDropdown').val()[0]), value: Number($('.possCardsDropdown').val()[1])}})
         }
     });
     moveForm.append(submitButton);
     return moveForm
+}
+
+let makeDeclareDropdown = (halfsuits)=>{ //dropdown to select halfsuit to declare. ugly
+    let declareDropdown=$('<select>',{
+        class: 'declareDropdown'
+    })
+    halfsuits.forEach((item)=>{
+        let poss=$('<option>', {
+            text: JSON.stringify(item),
+            value: item
+        });
+        declareDropdown.append(poss);
+    });
+    return declareDropdown;
+}
+
+let makeCardDeclareDropdown = (value, team)=>{
+    let cardDeclareDropdown=$('<select>',{
+        class: 'cardDeclareDropdown'+JSON.stringify(value), //should show a picture instead
+    })
+    team.forEach((item)=>{
+        let poss=$('<option>', {
+            text: JSON.stringify(item),
+            value: item
+        });
+        cardDeclareDropdown.append(poss);
+    });
+    return cardDeclareDropdown;
+}
+
+let makeDeclareDiv = (halfsuits, team) =>{
+    let declareDiv=$('<div>', {
+        class: 'declareDiv'
+    })
+    declareDiv.append(makeDeclareDropdown(halfsuits));
+    let declareButton = $('<button>',{
+        text: 'Declare',
+        click: ()=>{
+            let halfsuit=Number($('.declareDropdown').val());
+            let cardHolders=[];
+            [0,1,2,3,4,5].forEach((item)=>{
+                cardHolders.push($('.cardDeclareDropdown'+JSON.stringify(item)).val());
+            })
+            console.log(`TEST: halfsuit: ${halfsuit}, cardHolders: ${cardHolders}`)
+            socket.emit('declare', {id: id, halfsuit: halfsuit, cardHolders: cardHolders});
+        }
+    });
+    declareDiv.append(declareButton);
+    [0,1,2,3,4,5].forEach((item)=>{
+        declareDiv.append(makeCardDeclareDropdown(item, team));
+    });
+    return declareDiv;
 }
 
 //socketing
@@ -112,6 +163,7 @@ socket.on('gameStarted', (data)=>{
     if(data.players.includes(id)){
         socket.emit('getCards', {room: room, id:id})
     }
+
 });
 
 socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need to fix
@@ -124,6 +176,13 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
         console.log(`ROOM: making move form`);
         $('.moveFormDiv').append(makeMoveForm(data.possPeople, data.possCards));
     }
+
+    if ($('.declareDiv')){
+        $('.declareDiv').remove();
+    }
+    console.log(`TEST: ${data.halfsuits}`)
+    $(".declareDivDiv").append(makeDeclareDiv(data.halfsuits, data.team))
+
 });
 
 socket.on('moveMade',(data)=>{
@@ -131,6 +190,15 @@ socket.on('moveMade',(data)=>{
         $('.pastMove').html(`${data.mover} took ${JSON.stringify(data.card)} from ${data.target}`);
     } else{
         $('.pastMove').html(`${data.mover} didn't take ${JSON.stringify(data.card)} from ${data.target}`);
+    }
+    socket.emit('getCards', {room: room, id:id});
+});
+
+socket.on('declared',(data)=>{
+    if (data.success){
+        $('.pastMove').html(`${data.declarer} successfully declared ${data.halfsuit}`);
+    } else{
+        $('.pastMove').html(`${data.declarer} unsuccessfully declared ${data.halfsuit}`);
     }
     socket.emit('getCards', {room: room, id:id});
 });
