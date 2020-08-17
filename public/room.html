@@ -7,18 +7,58 @@
     <link rel="stylesheet" type="text/css" href="/css/room.css">
 </head>
 <body>
-    <div class="grid">
-
+    <!-- grid 1 is for before game starts -->
+    <div class="gridA">
+        <div class="roomDivA">
+            <p class="roomA"></p>
+        </div>
+        <div class="sidebar1Div">
+            <div class="spectatorsDiv">
+                <p class="spectatorsName">Spectators:</p>
+                <div class="spectators"></div>
+            </div>
+        </div>
+        <div class="team1Div">
+            <div class="teamName1Div">
+                <p class="teamName">Team 1:</p>
+            </div>
+            <div class="members1Div"></div>
+        </div>
+        <div class="team2Div">
+            <div class="teamName2Div">
+                <p class="teamName">Team 2:</p><br>
+            </div>
+            <div class="members2Div"></div>
+        </div>
+        <!-- insert shuffle teams function -->
+        <div class="sidebar2Div"></div> 
+        <div class="startButtonDiv"></div>
     </div>
-    <h2 class="roomDiv">[room]</h2>
-    <h3 class="nameDiv">[id, name]</h3>
+
+    <!-- make grid 2 here -->
+    <div class="gridB">
+        <div class="hostAndTableDiv">
+            <div class="hostDiv"></div>
+            <div class="tableDiv"></div>
+        </div>
+        <div class="roomAndScoreDiv">
+            <div class="roomDivB">
+                <p class="roomB"></p>
+            </div>
+            <div class="scoreDiv"></div>
+        </div>
+        <div class="spectatorsAndLogDiv">
+            <div class="spectatorsDiv"></div>
+            <div class="logDiv"></div>
+        </div>
+        <div class="turnDiv"></div>
+        <div class="cardsDiv">
+        </div>
+        <div class="declareDivDiv"></div>
+    </div>
+
     <h4 class="pastMove"></h4>
-    <div class="players"></div>
-    <div class="startButtonDiv"></div>
-    <div class="cards"></div>
     <div class="table"></div>
-    <div class="moveFormDiv"></div>
-    <div class="declareDivDiv"></div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>

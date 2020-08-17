@@ -54,7 +54,10 @@ $('.create').click(() =>{
         sessionStorage.setItem("room", room);
         if(room && name && id){
             socket.emit('createRoom', {name: name, id: id, room: room});
-            location.href = '/'+room;
+            setTimeout(//timeout to let server create room
+            ()=>{location.href = '/'+room;},
+            100
+            )
         }else{
             location.href = '/';
         }

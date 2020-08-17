@@ -2,9 +2,98 @@ let room = sessionStorage.getItem('room');
 let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name');
 let host;
-//writes to page
-$("h2").html( room ); //ugly
-$("h3").html(`id: ${id}, name: ${name}`); //ugly
+
+//map functions:
+let cardMapFun = (card)=>{ //function maps card to card name. eg: {halfsuit: 3, value: 4} => '6D'
+    let d1;
+    let d2;
+    switch (card.halfsuit%5){
+        case 0:
+            d2='S';
+            break;
+        case 1:
+            d2='H';
+            break;
+        case 2:
+            d2='C';
+            break;
+        case 3:
+            d2='D';
+    }
+    if(card.halfsuit<=3){
+        d1=(card.value+2).toString();
+    } else if (card.halfsuit>=5){
+        switch (card.value){
+            case 0:
+                d1='9';
+                break;
+            case 1:
+                d1='10';
+                break;
+            case 2:
+                d1='J';
+                break;
+            case 3:
+                d1='Q';
+                break;
+            case 4:
+                d1='K';
+                break;
+            case 5:
+                d1='A';
+        }
+    } else if (card.halfsuit===4){
+        switch (card.value){
+            case 0:
+                d1='8';
+                d2='S'
+                break;
+            case 1:
+                d1='8';
+                d2='H';
+                break;
+            case 2:
+                d1='8';
+                d2='C';
+                break;
+            case 3:
+                d1='8';
+                d2='D';
+                break;
+            case 4:
+                d1='X';
+                d2='B';
+                break;
+            case 5:
+                d1='X';
+                d2='R';
+        }
+    }
+    return d1+d2;
+};
+
+let halfsuitMapFun = (halfsuit)=>{//maps halfsuit to halfuit name. eg: 6 => UH
+    switch (halfsuit){
+        case 0:
+            return 'LS';
+        case 1:
+            return 'LH';
+        case 2:
+            return 'LC';
+        case 3:
+            return 'LD';
+        case 4:
+            return '8s';
+        case 5:
+            return 'US';
+        case 6:
+            return 'UH';
+        case 7:
+            return 'UC';
+        case 8:
+            return 'UD';
+    }
+};
 
 //buttons: 
 let startButton = $("<button>", { //button to start game
@@ -36,7 +125,7 @@ let makePossCardsDropdown = (possCards)=>{ //dropdown to select card to ask for.
     })
     possCards.forEach((item)=>{
         let poss=$('<option>', {
-            text: JSON.stringify(item),
+            text: cardMapFun(item),
             value: item.halfsuit.toString()+item.value.toString()
         });
         possCardsDropdown.append(poss);
@@ -44,20 +133,29 @@ let makePossCardsDropdown = (possCards)=>{ //dropdown to select card to ask for.
     return possCardsDropdown;
 }
 
-let makeMoveForm = (possPeople, possCards) => { //actually a div so i should rename
-    let moveForm = $('<div>', {
-        class: 'moveForm',
+let makeMoveDiv = (possPeople, possCards) => {
+    let moveDiv = $('<div>', {
+        class: 'moveDiv',
     });
-    moveForm.append(makePossPeopleDropdown(possPeople));
-    moveForm.append(makePossCardsDropdown(possCards));
+    moveDiv.append(makePossPeopleDropdown(possPeople));
+    moveDiv.append(makePossCardsDropdown(possCards));
     let submitButton = $('<button>',{
         text: 'Make Move',
         click: ()=>{
             socket.emit('makeMove', {id: id, target: $('.possPeopleDropdown').val(), card: {halfsuit: Number($('.possCardsDropdown').val()[0]), value: Number($('.possCardsDropdown').val()[1])}})
         }
     });
-    moveForm.append(submitButton);
-    return moveForm
+    moveDiv.append(submitButton);
+    return moveDiv
+}
+
+let makeCard = (card)=>{
+    let img = $('<img>', {
+        src: "/card/"+cardMapFun(card)+".png",
+        alt: cardMapFun(card),
+        height: '90%'
+    });
+    return img;
 }
 
 let makeDeclareDropdown = (halfsuits)=>{ //dropdown to select halfsuit to declare. ugly
@@ -137,27 +235,68 @@ socket.on('connect', ()=>{
 });
 socket.on('updatePlayers', (data)=>{
     //socket.io cant emit maps so we convert it to a string and then back
-    host=data.host;
-    let nameMap = new Map(JSON.parse(data.transitMapString));
-    let str=`host: ${data.host}  ${nameMap.get(data.host)}\n`;
-    str+='players: '+JSON.stringify(data.players);
-    str+='<br> team1: '+JSON.stringify(data.team1); // make this neater
-    str+='<br> team2: '+JSON.stringify(data.team2);
-    str+='<br> spectators: '+JSON.stringify(data.spectators);
-    $(".players").html(str);
+    //all of this only if game hasnt started. if it has started, remove grid1, unhide grid2 (?), ask for cards
+    if(!data.started){
+        $(".gridB").hide();
+        $(".roomA").html(`Room Code: ${room}`);
+        $("title").html(`Fish Online - ${name}`);
+        host=data.host;
+        let nameMap = new Map(JSON.parse(data.transitMapString));
 
-    if(data.players.length>=6 && host===id){ //only if game has started
-        $('.startButtonDiv').append(startButton);
-    }else if($(".startButton")){
-        $(".startButton").remove();
-    };
-    
+        $('.host').html(`Host: ${nameMap.get(data.host)}`) //host box
+
+        $('.members1Div').empty();
+        data.team1.forEach(item=>{
+            let playerboxDiv=$('<div>', {
+                class: 'playerBoxDiv'
+            })
+            let playerbox=$('<div>', {
+                class: 'playerBox'
+            })
+            playerbox.append(`<p>${nameMap.get(item)}</p>`);
+            playerboxDiv.append(playerbox)
+            $('.members1Div').append(playerboxDiv); //team1 box
+        });
+
+        $('.members2Div').empty();
+        data.team2.forEach(item=>{
+            let playerboxDiv=$('<div>', {
+                class: 'playerBoxDiv'
+            })
+            let playerbox=$('<div>', {
+                class: 'playerBox'
+            })
+            playerbox.append(`<p>${nameMap.get(item)}</p>`);
+            playerboxDiv.append(playerbox)
+            $('.members2Div').append(playerboxDiv); //team2 box
+        });
+
+        $('.spectators').empty(); //like playerbox but spectatorbox
+        data.spectators.forEach(item=>{
+            $('.spectators').append(`<li>${nameMap.get(item)}</li>`) //spectators box
+        });
+
+        if(data.players.length>=6){
+            if(host===id){
+                $('.startButtonDiv').append(startButton);
+            } else {
+                $('.startButtonDiv').append('waiting for host to start game');
+            }
+        }else{
+            $(".startButtonDiv").empty();
+        };
+    } else { //game has started
+        if(data.players.includes(id)){
+            $('.gridA').hide();
+            $(".gridB").show();
+            socket.emit('getCards', {room: room, id:id})
+        }
+    }
 });
 
 socket.on('gameStarted', (data)=>{
-    if($(".startButton")){
-        $(".startButton").remove();
-    };
+    $(".gridA").hide();
+    $('.gridB').show();
     //draw table
     $(".table").html('<br> table:'+JSON.stringify(data.table)); //socket cant emit maps
     if(data.players.includes(id)){
@@ -167,22 +306,25 @@ socket.on('gameStarted', (data)=>{
 });
 
 socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need to fix
-    $(".cards").html('<br> cards:'+JSON.stringify(data.cards));
-    console.log(`data: ${data.turnid}, id: ${id}`);
-    if ($('.moveForm')){
-        $('.moveForm').remove();
-    }
+
+    $('.roomB').html(`${room}`)
+
+    $('.cardsDiv').empty();
+    data.cards.forEach(item=>{
+        $('.cardsDiv').append(makeCard(item));
+    })
+
+    $('.turnDiv').empty();
     if(data.turnid===id){
-        console.log(`ROOM: making move form`);
-        $('.moveFormDiv').append(makeMoveForm(data.possPeople, data.possCards));
+        console.log(`TEST: making move div`);
+        //translate people to names
+        $('.turnDiv').append(makeMoveDiv(data.possPeople, data.cards));
+        //add notification of whose turn it is
     }
 
-    if ($('.declareDiv')){
-        $('.declareDiv').remove();
-    }
-    console.log(`TEST: ${data.halfsuits}`)
+    $('.declareDivDiv').empty();
+    //translate people and halfsuits
     $(".declareDivDiv").append(makeDeclareDiv(data.halfsuits, data.team))
-
 });
 
 socket.on('moveMade',(data)=>{

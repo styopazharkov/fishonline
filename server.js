@@ -47,6 +47,11 @@ app.get('/favicon.ico', (req, res)=>{
     res.sendFile(__dirname + '/public/img/favicon.ico');
 });
 
+app.get('/card/:card', (req, res)=>{
+    let card=req.params.card;
+    res.sendFile(__dirname + `/public/img/DeckOfCardsPNG/${card}`);
+});
+
 app.get('/:room', (req, res) =>{ 
     let room=req.params.room;
     if(rooms.has(room)){
@@ -185,7 +190,7 @@ roomio.on('connection', (socket) => {
 
                 //socket.io cant emit maps so we convert it to a string and then back
                 let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
+                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started})
 
                 //if game has started, emit updatecards
             }else{
@@ -252,6 +257,7 @@ roomio.on('connection', (socket) => {
 
     socket.on('getCards', (data) => {
         if(data.id===id && data.room===room){
+                //need to account for spectators
             console.log(`ROOMIO: user ${id} has requested cards`);
             let game=rooms.get(room);
             let update;
@@ -282,7 +288,6 @@ roomio.on('connection', (socket) => {
                         possCards.push({halfsuit: elem, value: val});
                     })
                 })
-                console.log(`posspeople: ${possPeople}, possCards: ${possCards}`);
 
                 let friendTeam = (game.cotable.get(id))%2;
                 let friends=[];
