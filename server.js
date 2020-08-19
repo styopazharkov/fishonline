@@ -47,6 +47,10 @@ app.get('/favicon.ico', (req, res)=>{
     res.sendFile(__dirname + '/public/img/favicon.ico');
 });
 
+app.get('/table', (req, res)=>{
+    res.sendFile(__dirname + '/public/img/table.png');
+});
+
 app.get('/card/:card', (req, res)=>{
     let card=req.params.card;
     res.sendFile(__dirname + `/public/img/DeckOfCardsPNG/${card}`);
@@ -69,7 +73,7 @@ app.get('/:room', (req, res) =>{
 // ############ INDEXIO
 const indexio = io.of('/indexio');
 indexio.on('connection', (socket) => {
-    console.log(`INDEXIO: user joined`);
+    // console.log(`INDEXIO: user joined`);
     var id;
     var name;
     var room;
@@ -78,12 +82,12 @@ indexio.on('connection', (socket) => {
         id = data.id;
         name = data.name;
         room = data.room;
-        console.log(`INDEXIO: user gave info: id: ${id}, name: ${name}, room: ${room}`);
+        // console.log(`INDEXIO: user gave info: id: ${id}, name: ${name}, room: ${room}`);
     });
 
     socket.on('getID', ()=>{
         id = Math.floor((Math.random() * 100000000000)).toString();
-        console.log(`INDEXIO: user asked for new id: ${id}`);
+        // console.log(`INDEXIO: user asked for new id: ${id}`);
         socket.emit('setID', id);
     });
 
@@ -108,20 +112,23 @@ indexio.on('connection', (socket) => {
             cotable: null,
             halfsuits: [0,1,2,3,4,5,6,7,8],
             score1: 0,
-            score2: 0
+            won1: [],
+            score2: 0,
+            won2: [],
+            pastMoves: []
             }
         );
     });
 
     socket.on('disconnect', () => {
-        console.log(`INDEXIO: user ${id}, ${name}, ${room} disconnected. ${rooms.size}`);
+        // console.log(`INDEXIO: user ${id}, ${name}, ${room} disconnected. ${rooms.size}`);
     });
 })
 
 // ############ JOINIO
 const joinio = io.of('/joinio');
 joinio.on('connection', (socket) => {
-    console.log(`JOINIO: user joined`);
+    // console.log(`JOINIO: user joined`);
     var id;
     var name;
     var room;
@@ -130,7 +137,7 @@ joinio.on('connection', (socket) => {
         id = data.id;
         name = data.name;
         room = data.room;
-        console.log(`JOINIO: user gave info: id: ${id}, name: ${name}, room: ${room}`);
+        // console.log(`JOINIO: user gave info: id: ${id}, name: ${name}, room: ${room}`);
     });
 
     socket.on('requestJoin', (data)=>{
@@ -140,7 +147,9 @@ joinio.on('connection', (socket) => {
             room = data.room
             let game=rooms.get(room);
             game.players.push(data.id);
-            if(game.team1.length<3){
+            if(game.players.includes(data.id)){
+                console.log(`ROOMIO: someone joined who was already in the room`)
+            }else if(game.team1.length<3){
                 game.team1.push(data.id);
             }else if(game.team2.length<3){
                 game.team2.push(data.id);
@@ -155,14 +164,14 @@ joinio.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`JOINIO: user ${id}, ${name}, ${room}  disconnected. ${rooms.size}, `);
+        // console.log(`JOINIO: user ${id}, ${name}, ${room}  disconnected. ${rooms.size}, `);
     });
 })
 
 // ############ ROOMIO
 const roomio = io.of('/roomio');
 roomio.on('connection', (socket) => {
-    console.log(`ROOMIO:  user joined`);
+    // console.log(`ROOMIO:  user joined`);
     var id;
     var name;
     var room;
@@ -190,7 +199,7 @@ roomio.on('connection', (socket) => {
 
                 //socket.io cant emit maps so we convert it to a string and then back
                 let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started})
+                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
 
                 //if game has started, emit updatecards
             }else{
@@ -245,29 +254,36 @@ roomio.on('connection', (socket) => {
                 game.cards[counter].push(randomCard); // deals the cards in a circle
                 counter = (counter+1)%6;
             }
-            console.log(`ROOMIO: table made in room ${room}: ${JSON.stringify(game.table)}, cards dealt: ${JSON.stringify(game.cards)}`);
+            // console.log(`ROOMIO: table made in room ${room}: ${JSON.stringify(game.table)}, cards dealt: ${JSON.stringify(game.cards)}`);
 
             //tell players to ask for their cards
-            roomio.in(room).emit('gameStarted', {players: game.players, table: game.table}); //table should be converted before emiting because socketio cant emit maps
+            roomio.in(room).emit('gameStarted', {players: game.players}); //table should be converted before emiting because socketio cant emit maps
         }else{
             //tell host why game start failed
-            console.log(`game start failed: not host or not enough players host: ${game.host}, id: ${id}, data.id: ${data.id}, numplayers: ${game.players.length}`)
+            console.log(`ERROR: game start failed: not host or not enough players host: ${game.host}, id: ${id}, data.id: ${data.id}, numplayers: ${game.players.length}`)
         }
     });
 
     socket.on('getCards', (data) => {
         if(data.id===id && data.room===room){
                 //need to account for spectators
-            console.log(`ROOMIO: user ${id} has requested cards`);
+            // console.log(`ROOMIO: user ${id} has requested cards`);
             let game=rooms.get(room);
             let update;
             let counter=0;
             while(game.cards[game.turn].length===0 && counter<3){//passes move on to next player
-                console.log(`TEST: ${game.turn} passing move on`)
+                // console.log(`TEST: ${game.turn} passing move on`)
                 game.turn=(game.turn+2)%6;
                 counter++; //if counter reaches 3, the team has no cards so server should emit 'declare phase' with no moves.
             }
             let turnid = game.table.get(game.turn);
+
+            let fakeTable=[]; //information to draw table on screen: name and number of cards
+            [0,1,2,3,4,5].forEach(elem => {
+                let temp = (game.cotable.get(id)+elem)%6;
+                fakeTable.push(game.nameMap.get(game.table.get(temp)) + ': ' + game.cards[temp].length.toString());
+            });
+
             if(id===turnid){
 
                 //makes possPeople to ask and possCards to ask for
@@ -294,14 +310,15 @@ roomio.on('connection', (socket) => {
                 [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
                    friends.push(game.table.get(item))
                 });
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards, halfsuits: game.halfsuits, team: friends}
+
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1:game.won1, won2: game.won2, spectatorLen: game.spectators.length, host:game.host}
             }else{
                 let friendTeam = (game.cotable.get(id))%2;
                 let friends=[];
                 [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
-                   friends.push(game.table.get(item))
+                   friends.push(game.table.get(item));
                 });
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, halfsuits: game.halfsuits, team: friends}
+                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1: game.won1, won2: game.won2, spectatorLen: game.spectators.length, host: game.host}
             }
             socket.emit('updateCards', update); //should also update the turn and possmoves and table
         }
@@ -324,13 +341,15 @@ roomio.on('connection', (socket) => {
 
             if(match){
                 console.log(`ROOMIO: ${id} asked ${data.target} for ${JSON.stringify(data.card)} and got it`);
+                game.pastMoves.push({mover: id, target: data.target, card:data.card, success:true});
                 game.cards[game.cotable.get(id)].push(data.card);// adds card to players hand
                 targetCards.splice(targetCards.indexOf(targetCard),1); //removes card from targets hand
-                roomio.in(room).emit('moveMade', {mover: id, target: data.target, card: data.card, success: true});
+                roomio.in(room).emit('moveMade', game.pastMoves.slice(-2));
             }else{
                 console.log(`ROOMIO: ${id} asked ${data.target} for ${JSON.stringify(data.card)} but didn't get it`);
+                game.pastMoves.push({mover: id, target: data.target, card:data.card, success:false});
                 game.turn=game.cotable.get(data.target);
-                roomio.in(room).emit('moveMade', {mover: id, target: data.target, card: data.card, success: false});
+                roomio.in(room).emit('moveMade', game.pastMoves.slice(-2));
             }
         }else{
             console.log(`ROOMIO: IDs do not match`);
@@ -351,11 +370,15 @@ roomio.on('connection', (socket) => {
                     success=false;
                 } 
             })
-            if(success){
-                if(game.team1.includes(id)) {game.score1++;} else {game.score2++;}
-            }else{
-                if(game.team1.includes(id)) {game.score2++;} else {game.score1++;}
+
+            if((game.team1.includes(id)&&success) || (game.team2.includes(id)&&!success)){
+                game.score1++;
+                game.won1.push(data.halfsuit);
+            } else {
+                game.score2++;
+                game.won2.push(data.halfsuit);
             }
+
             console.log(`ROOMIO: ${id} unsuccessfully declared ${data.halfsuit}`);
             for(let i=0; i < 6; i++){
                 let temp=game.cards[i];
@@ -390,7 +413,7 @@ roomio.on('connection', (socket) => {
                             game.host=game.players[0]
                             console.log(`ROOMIO: ${id} (the host) actually left, ${game.host} is the new host`);
                             let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                            roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
+                            roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
                         }else{
                             rooms.delete(room);
                             console.log(`ROOMIO: ${id} (the host) actually left, room ${room} deleted`);
@@ -403,10 +426,11 @@ roomio.on('connection', (socket) => {
                         if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
                         if (game.spectators.includes(id)) game.spectators.splice(game.spectators.indexOf(id),1);
                         let transitMapString = JSON.stringify(Array.from(game.nameMap));
-                        roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString})
+                        roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
                     }
                 }else{ //if game has started
                     //restart the game and wait for players. move any spectators down to player. let people know who left. check for host
+                    //if a player leaves and comes back, he becomes a spectator. fix that.
                     console.log(`ROOMIO: ${id} actually left during game`);
                 };
             }, 2000);

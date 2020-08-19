@@ -14,6 +14,7 @@
         </div>
         <div class="sidebar1Div">
             <div class="spectatorsDiv">
+                <p class="hostA"></p>
                 <p class="spectatorsName">Spectators:</p>
                 <div class="spectators"></div>
             </div>
@@ -38,18 +39,37 @@
     <!-- make grid 2 here -->
     <div class="gridB">
         <div class="hostAndTableDiv">
-            <div class="hostDiv"></div>
-            <div class="tableDiv"></div>
+            <div class="hostDiv">
+                <p class="hostB"></p>
+            </div>
+            <div class="tableDiv">
+                <p class="name3"></p>
+                <p class="name2"></p>
+                <p class="name4"></p>
+                <div class="table"><img  src="/table" alt="[table image]" width="90%"></div>
+                <p class="name1"></p>
+                <p class="name5"></p>
+                <p class="name0"></p>
+            </div>
         </div>
         <div class="roomAndScoreDiv">
             <div class="roomDivB">
                 <p class="roomB"></p>
             </div>
-            <div class="scoreDiv"></div>
+            <div class="team1scoreDiv">
+                <h5>Team 1 points:</h5>
+                <div class="team1score"></div>
+            </div>
+            <div class="team2scoreDiv">
+                <h5>Team 2 points:</h5>
+                <div class="team2score"></div>
+            </div>
         </div>
         <div class="spectatorsAndLogDiv">
             <div class="spectatorsDiv"></div>
-            <div class="logDiv"></div>
+            <div class="logDiv">
+                <h4>Past moves:</h4>
+            </div>
         </div>
         <div class="turnDiv"></div>
         <div class="cardsDiv">
@@ -57,11 +77,16 @@
         <div class="declareDivDiv"></div>
     </div>
 
-    <h4 class="pastMove"></h4>
-    <div class="table"></div>
-
+    
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script>
+        window.onresize = () => {
+            let factor = $(window).width()/900;
+            $('.gridB').css('zoom',`${factor}`);
+            $('.gridA').css('zoom',`${factor}`);
+        }
+    </script>
     <script src="/js/room.js"></script>
     
 </body>

@@ -126,7 +126,7 @@ body {
     margin: auto;
     margin-top: 20px;
     grid-template-columns:  33% 34% 33%;
-    grid-template-rows: 35% 15% 35% 15%;
+    grid-template-rows: 45% 10% 30% 15%;
 }
 
 .hostAndTableDiv{
@@ -154,9 +154,15 @@ body {
 .turnDiv{
     grid-row: 2/3;
     grid-column: 1/4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .cardsDiv{
+    display: flex;
+    justify-content: center;
+    align-items: center;
     grid-row: 3/4;
     grid-column: 1/4;
 }
@@ -176,4 +182,135 @@ body {
 .roomB{
     font-family: 'propagandaregular', Arial, sans-serif;
     font-size: larger;
+}
+
+.card{
+    margin: 5px;
+}
+
+.declareDiv{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.moveDiv{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.declareDropdown{
+    height: 70%;
+    width: 13%;
+    margin: 3px;
+}
+
+.cardDeclareDropdown, .possCardsDropdown, .possPeopleDropdown{
+    height: 70%;
+    width: 15%;
+    margin: 3px;
+}
+
+.hostDiv{
+    display: flex;
+    align-items: center;
+}
+
+.declareButton, .makeMoveButton{
+    height: 70%;
+    margin: 7px;
+}
+
+.tableDiv{
+    display: grid;
+    grid-template-rows: 20% 30% 30% 20%;
+    grid-template-columns: 30% 40% 30%;
+}
+
+.name3{
+    font-size: smaller;
+    grid-row: 1/2;
+    grid-column: 1/4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.name2{
+    font-size: smaller;
+    margin-bottom: 10%;
+    grid-row: 2/3;
+    grid-column: 1/2;
+    display: flex;
+    justify-content: flex-end; 
+    align-items: center;
+}
+
+.name4{
+    font-size: smaller;
+    margin-bottom: 10%;
+    grid-row: 2/3;
+    grid-column: 3/4;
+    display: flex;
+    align-items: center;
+}
+
+.table{
+    font-size: smaller;
+    grid-row: 2/4;
+    grid-column: 2/3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.name1{
+    font-size: smaller;
+    margin-top: 10%;
+    grid-row: 3/4;
+    grid-column: 1/2;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+.name5{
+    font-size: smaller;
+    margin-top: 10%;
+    grid-row: 3/4;
+    grid-column: 3/4;
+    display: flex;
+    align-items: center;
+}
+
+.name0{
+    font-size: smaller;
+    grid-row: 4/5;
+    grid-column: 1/4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.team1scoreDiv, .team2scoreDiv{
+    display: grid;
+    grid-template-rows: 20% 80%;
+    
+}
+
+.team1scoreDiv p, .team2scoreDiv p{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: smaller;
+}
+
+.logDiv p, .logDiv h4{
+    margin-left: 10px;
+}
+
+.logDiv p{
+    font-size: smaller;
 }

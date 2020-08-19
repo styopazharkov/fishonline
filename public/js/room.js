@@ -2,6 +2,10 @@ let room = sessionStorage.getItem('room');
 let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name');
 let host;
+let nameMap;
+
+$('.gridA').hide();
+$(".gridB").hide();
 
 //map functions:
 let cardMapFun = (card)=>{ //function maps card to card name. eg: {halfsuit: 3, value: 4} => '6D'
@@ -75,44 +79,49 @@ let cardMapFun = (card)=>{ //function maps card to card name. eg: {halfsuit: 3, 
 let halfsuitMapFun = (halfsuit)=>{//maps halfsuit to halfuit name. eg: 6 => UH
     switch (halfsuit){
         case 0:
-            return 'LS';
+            return 'Low Spades';
         case 1:
-            return 'LH';
+            return 'Low Hearts';
         case 2:
-            return 'LC';
+            return 'Low Clubs';
         case 3:
-            return 'LD';
+            return 'Low Diamonds';
         case 4:
-            return '8s';
+            return '8s & Jokers';
         case 5:
-            return 'US';
+            return 'High Spades';
         case 6:
-            return 'UH';
+            return 'High Hearts';
         case 7:
-            return 'UC';
+            return 'High Clubs';
         case 8:
-            return 'UD';
+            return 'High Diamonds';
     }
 };
 
 //buttons: 
-let startButton = $("<button>", { //button to start game
+let startButton = () => { return $("<button>", { //button to start game
     text: 'Start Game',
     class: 'startButton',
     click: () => {
         console.log(`ROOM: game started`)
         socket.emit('startGame', {id: id, room: room})
     }
-})
+});}
 
 let makePossPeopleDropdown = (possPeople)=>{ //dropdown to select person to ask. ugly
     let possPeopleDropdown=$('<select>',{
         class: 'possPeopleDropdown'
     })
+    let d=$('<option>', {
+        value: 'none',
+        text: 'Player:'
+    });
+    possPeopleDropdown.append(d);
     possPeople.forEach((item)=>{
         let poss=$('<option>', {
             value: item,
-            text: item
+            text: nameMap.get(item)
         });
         possPeopleDropdown.append(poss);
     })
@@ -123,6 +132,11 @@ let makePossCardsDropdown = (possCards)=>{ //dropdown to select card to ask for.
     let possCardsDropdown=$('<select>',{
         class: 'possCardsDropdown'
     })
+    let d=$('<option>', {
+        text: 'Card:',
+        value: 'none'
+    });
+    possCardsDropdown.append(d);
     possCards.forEach((item)=>{
         let poss=$('<option>', {
             text: cardMapFun(item),
@@ -141,8 +155,16 @@ let makeMoveDiv = (possPeople, possCards) => {
     moveDiv.append(makePossCardsDropdown(possCards));
     let submitButton = $('<button>',{
         text: 'Make Move',
+        class: 'makeMoveButton',
         click: ()=>{
-            socket.emit('makeMove', {id: id, target: $('.possPeopleDropdown').val(), card: {halfsuit: Number($('.possCardsDropdown').val()[0]), value: Number($('.possCardsDropdown').val()[1])}})
+            let target=$('.possPeopleDropdown').val()
+            let card=$('.possCardsDropdown').val()
+            if(target==='none' || card === 'none'){
+                console.log(`invalid option ${target}, ${card}`)
+                return;
+            }
+            //make sure that player actually selected
+            socket.emit('makeMove', {id: id, target: target, card: {halfsuit: Number(card[0]), value: Number(card[1])}})
         }
     });
     moveDiv.append(submitButton);
@@ -151,20 +173,38 @@ let makeMoveDiv = (possPeople, possCards) => {
 
 let makeCard = (card)=>{
     let img = $('<img>', {
+        class: 'card',
         src: "/card/"+cardMapFun(card)+".png",
         alt: cardMapFun(card),
-        height: '90%'
+        height: '85%'
     });
     return img;
 }
 
 let makeDeclareDropdown = (halfsuits)=>{ //dropdown to select halfsuit to declare. ugly
     let declareDropdown=$('<select>',{
-        class: 'declareDropdown'
-    })
+        class: 'declareDropdown',
+        change: ()=>{
+            console.log('change');
+            let halfsuit=$('.declareDropdown').val();
+            console.log(halfsuit);
+            for(let i=0; i<6; i++){
+                if (halfsuit!=='none'){
+                    $('.defaultCardDeclare'+JSON.stringify(i)).html(`Has ${cardMapFun({halfsuit: Number(halfsuit), value: i})}:`);
+                }else{
+                    $('.defaultCardDeclare'+JSON.stringify(i)).html('Carholder');
+                }
+            }
+        }
+    });
+    let d=$('<option>', {
+        text: 'Halfsuit',
+        value: 'none'
+    });
+    declareDropdown.append(d);
     halfsuits.forEach((item)=>{
         let poss=$('<option>', {
-            text: JSON.stringify(item),
+            text: halfsuitMapFun(item),
             value: item
         });
         declareDropdown.append(poss);
@@ -174,11 +214,17 @@ let makeDeclareDropdown = (halfsuits)=>{ //dropdown to select halfsuit to declar
 
 let makeCardDeclareDropdown = (value, team)=>{
     let cardDeclareDropdown=$('<select>',{
-        class: 'cardDeclareDropdown'+JSON.stringify(value), //should show a picture instead
+        class: 'cardDeclareDropdown cardDeclareDropdown'+JSON.stringify(value), //should show a picture instead
     })
+    let d=$('<option>', {
+        class: 'defaultCardDeclare'+JSON.stringify(value),
+        text: 'CardHolder', //convert to card name
+        value: 'none'
+    });
+    cardDeclareDropdown.append(d);
     team.forEach((item)=>{
         let poss=$('<option>', {
-            text: JSON.stringify(item),
+            text: nameMap.get(item), 
             value: item
         });
         cardDeclareDropdown.append(poss);
@@ -193,20 +239,26 @@ let makeDeclareDiv = (halfsuits, team) =>{
     declareDiv.append(makeDeclareDropdown(halfsuits));
     let declareButton = $('<button>',{
         text: 'Declare',
+        class: 'declareButton',
         click: ()=>{
-            let halfsuit=Number($('.declareDropdown').val());
+            let invalid=false //makes sure all inputs are good
+            let halfsuit=$('.declareDropdown').val();
+            if(halfsuit==='none')invalid=true;
             let cardHolders=[];
             [0,1,2,3,4,5].forEach((item)=>{
-                cardHolders.push($('.cardDeclareDropdown'+JSON.stringify(item)).val());
+                let temp=$('.cardDeclareDropdown'+JSON.stringify(item)).val()
+                if (temp==='none') invalid=true;
+                cardHolders.push(temp);
             })
+            if(invalid) return;
             console.log(`TEST: halfsuit: ${halfsuit}, cardHolders: ${cardHolders}`)
-            socket.emit('declare', {id: id, halfsuit: halfsuit, cardHolders: cardHolders});
+            socket.emit('declare', {id: id, halfsuit: Number(halfsuit), cardHolders: cardHolders});
         }
     });
-    declareDiv.append(declareButton);
     [0,1,2,3,4,5].forEach((item)=>{
         declareDiv.append(makeCardDeclareDropdown(item, team));
     });
+    declareDiv.append(declareButton);
     return declareDiv;
 }
 
@@ -237,13 +289,14 @@ socket.on('updatePlayers', (data)=>{
     //socket.io cant emit maps so we convert it to a string and then back
     //all of this only if game hasnt started. if it has started, remove grid1, unhide grid2 (?), ask for cards
     if(!data.started){
+        $('.gridA').show();
         $(".gridB").hide();
         $(".roomA").html(`Room Code: ${room}`);
         $("title").html(`Fish Online - ${name}`);
         host=data.host;
-        let nameMap = new Map(JSON.parse(data.transitMapString));
+        nameMap = new Map(JSON.parse(data.transitMapString));
 
-        $('.host').html(`Host: ${nameMap.get(data.host)}`) //host box
+        $('.hostA').html(`Host: ${nameMap.get(data.host)}`) //host box
 
         $('.members1Div').empty();
         data.team1.forEach(item=>{
@@ -275,21 +328,23 @@ socket.on('updatePlayers', (data)=>{
         data.spectators.forEach(item=>{
             $('.spectators').append(`<li>${nameMap.get(item)}</li>`) //spectators box
         });
-
+        $(".startButtonDiv").empty();
         if(data.players.length>=6){
             if(host===id){
-                $('.startButtonDiv').append(startButton);
+                $('.startButtonDiv').append(startButton());
             } else {
                 $('.startButtonDiv').append('waiting for host to start game');
             }
-        }else{
-            $(".startButtonDiv").empty();
-        };
+        }
     } else { //game has started
         if(data.players.includes(id)){
+            $("title").html(`Fish Online - ${name}`);
+            nameMap = new Map(JSON.parse(data.transitMapString));
+            console.log(`user joined while game is started`)
             $('.gridA').hide();
             $(".gridB").show();
             socket.emit('getCards', {room: room, id:id})
+            $('.hostB').html(`Host: ${nameMap.get(data.host)}`)
         }
     }
 });
@@ -297,8 +352,6 @@ socket.on('updatePlayers', (data)=>{
 socket.on('gameStarted', (data)=>{
     $(".gridA").hide();
     $('.gridB').show();
-    //draw table
-    $(".table").html('<br> table:'+JSON.stringify(data.table)); //socket cant emit maps
     if(data.players.includes(id)){
         socket.emit('getCards', {room: room, id:id})
     }
@@ -309,38 +362,62 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
 
     $('.roomB').html(`${room}`)
 
+    $('.hostB').html(`Host: ${nameMap.get(data.host)}`)
+
     $('.cardsDiv').empty();
     data.cards.forEach(item=>{
         $('.cardsDiv').append(makeCard(item));
     })
 
+    for(let i=0; i<6; i++){
+        $('.name'+i.toString()).html(data.fakeTable[i]);
+    }
+
+    console.log(data.won1)
+    $('.team1score').empty();
+    data.won1.forEach(elem => {
+        $('.team1score').append(`<p>${halfsuitMapFun(elem)}</p>`);
+    });
+
+    $('.team2score').empty();
+    data.won2.forEach(elem => {
+        $('.team2score').append(`<p>${halfsuitMapFun(elem)}</p>`);
+    });
+
+    $('.spectatorsDiv').empty();
+    $('.spectatorsDiv').append(`${data.spectatorLen} spectartors watching`)
+
     $('.turnDiv').empty();
     if(data.turnid===id){
         console.log(`TEST: making move div`);
-        //translate people to names
-        $('.turnDiv').append(makeMoveDiv(data.possPeople, data.cards));
-        //add notification of whose turn it is
+        $('.turnDiv').append(makeMoveDiv(data.possPeople, data.possCards));
+    } else {
+        $('.turnDiv').append(`<p>Waiting on ${nameMap.get(data.turnid)} to move...</p>`)
     }
 
     $('.declareDivDiv').empty();
-    //translate people and halfsuits
     $(".declareDivDiv").append(makeDeclareDiv(data.halfsuits, data.team))
 });
 
 socket.on('moveMade',(data)=>{
-    if (data.success){
-        $('.pastMove').html(`${data.mover} took ${JSON.stringify(data.card)} from ${data.target}`);
-    } else{
-        $('.pastMove').html(`${data.mover} didn't take ${JSON.stringify(data.card)} from ${data.target}`);
-    }
+    $('.logDiv').empty()
+    $('.logDiv').append('<h4>Past moves:</h4>')
+    data.forEach(elem => {
+        if (elem.success){
+            $('.logDiv').append(`<p> ${nameMap.get(elem.mover)} took ${cardMapFun(elem.card)} from ${nameMap.get(elem.target)} <p>`);
+        } else{
+            $('.logDiv').append(`<p> ${nameMap.get(elem.mover)} didn't take ${cardMapFun(elem.card)} from ${nameMap.get(elem.target)} <p>`);
+        }
+    });
+    
     socket.emit('getCards', {room: room, id:id});
 });
 
 socket.on('declared',(data)=>{
     if (data.success){
-        $('.pastMove').html(`${data.declarer} successfully declared ${data.halfsuit}`);
+        $('.logDiv').append(`<p>${nameMap.get(data.declarer)} successfully declared ${halfsuitMapFun(data.halfsuit)}</p>`);
     } else{
-        $('.pastMove').html(`${data.declarer} unsuccessfully declared ${data.halfsuit}`);
+        $('.logDiv').append(`<p>${nameMap.get(data.declarer)} unsuccessfully declared ${halfsuitMapFun(data.halfsuit)}</p>`);
     }
     socket.emit('getCards', {room: room, id:id});
 });
