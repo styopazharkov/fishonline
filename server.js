@@ -8,7 +8,7 @@ let rooms = new Map();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-server.listen(port, () => {
+server.listen(process.env.PORT || port, () => {
     console.log(`Server is running on port ${port}.`);
 });
 
