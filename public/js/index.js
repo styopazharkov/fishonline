@@ -1,3 +1,4 @@
+
 //index.js
 let id = sessionStorage.getItem('id');
 let name;
@@ -24,6 +25,14 @@ socket.on('setID', (id)=>{
 
 $('.join').click(() =>{
     let name = $('.name').val();
+    if(!name.match(/^[A-Za-z]+$/)){
+        swal('Name Error:', 'Only letters please','error')
+        return;
+    }
+    if(name.length>11){
+        swal('Name Error:', "Let's keep it under a dozen letters",'error')
+        return;
+    }
     if(name){ //check that all chars are good too
         console.log(`INDEX: setting name to ${name}`);
         let id=sessionStorage.getItem('id');
@@ -35,6 +44,14 @@ $('.join').click(() =>{
 
 $('.create').click(() =>{
     let name = $('.name').val();
+    if(!name.match(/^[A-Za-z]+$/)){
+        swal('Name Error:', 'Only letters please','error')
+        return; 
+    }
+    if(name.length>11){
+        swal('Name Error:', "Let's keep it under a dozen letters",'error')
+        return;
+    }
     if(name){//check that all chars are good too
         console.log(`INDEX: setting name to ${name}`);
         //check that name is valid
