@@ -43,6 +43,10 @@ app.get('/rules', (req, res) =>{
     res.sendFile(__dirname + '/public/rules.html');
 });
 
+app.get('/credits', (req, res) =>{
+    res.sendFile(__dirname + '/public/credits.html');
+});
+
 app.get('/favicon.ico', (req, res)=>{
     res.sendFile(__dirname + '/public/img/favicon.ico');
 });
@@ -146,16 +150,18 @@ joinio.on('connection', (socket) => {
             console.log(`JOINIO: room ${data.room} approved to ${data.id, data.name}`);
             room = data.room
             let game=rooms.get(room);
-            game.players.push(data.id);
             if(game.players.includes(data.id)){
-                console.log(`ROOMIO: someone joined who was already in the room`)
-            }else if(game.team1.length<3){
-                game.team1.push(data.id);
-            }else if(game.team2.length<3){
-                game.team2.push(data.id);
+                console.log(`ERROR: someone joined who was already in the room`)
             }else{
-                game.spectators.push(data.id)
-            };
+                game.players.push(data.id);
+                if(game.team1.length<3){
+                    game.team1.push(data.id);
+                }else if(game.team2.length<3){
+                    game.team2.push(data.id);
+                }else{
+                    game.spectators.push(data.id)
+                };
+            }
             socket.emit('requestAns', true); //make the data an object
         }else{
             console.log(`JOINIO: room ${data.room} denied to ${data.id, data.name}`);
@@ -270,56 +276,66 @@ roomio.on('connection', (socket) => {
             // console.log(`ROOMIO: user ${id} has requested cards`);
             let game=rooms.get(room);
             let update;
-            let counter=0;
-            while(game.cards[game.turn].length===0 && counter<3){//passes move on to next player
-                // console.log(`TEST: ${game.turn} passing move on`)
-                game.turn=(game.turn+2)%6;
-                counter++; //if counter reaches 3, the team has no cards so server should emit 'declare phase' with no moves.
-            }
             let turnid = game.table.get(game.turn);
 
-            let fakeTable=[]; //information to draw table on screen: name and number of cards
-            [0,1,2,3,4,5].forEach(elem => {
-                let temp = (game.cotable.get(id)+elem)%6;
-                fakeTable.push(game.nameMap.get(game.table.get(temp)) + ': ' + game.cards[temp].length.toString());
-            });
-
-            if(id===turnid){
-
-                //makes possPeople to ask and possCards to ask for
-                let possPeople=[]; //people you can ask
-                let enemyTeam = (game.cotable.get(id)+1)%2;
-                [enemyTeam, enemyTeam+2, enemyTeam+4].forEach(elem=>{
-                    if(game.cards[elem].length>0) possPeople.push(game.table.get(elem));
+            if(game.team1.includes(id) || game.team2.includes(id)){
+                let counter=0;
+                while(game.cards[game.turn].length===0 && counter<3){//passes move on to next player
+                    // console.log(`TEST: ${game.turn} passing move on`)
+                    game.turn=(game.turn+2)%6;
+                    counter++; //if counter reaches 3, the team has no cards so server should emit 'declare phase' with no moves.
+                }
+    
+                let fakeTable=[]; //information to draw table on screen: name and number of cards
+                [0,1,2,3,4,5].forEach(elem => {
+                    let temp = (game.cotable.get(id)+elem)%6;
+                    fakeTable.push(game.nameMap.get(game.table.get(temp)) + ': ' + game.cards[temp].length.toString());
                 });
-
-                let possCards=[]; //cards you can ask for
-                let cards=game.cards[game.cotable.get(id)];
-                let possHalfsuits=[];
-                cards.forEach(elem=>{
-                    if (!possHalfsuits.includes(elem.halfsuit)) possHalfsuits.push(elem.halfsuit);
-                });
-                possHalfsuits.forEach(elem=>{
-                    [0,1,2,3,4,5].forEach(val=>{
-                        possCards.push({halfsuit: elem, value: val});
+    
+                if(id===turnid){
+    
+                    //makes possPeople to ask and possCards to ask for
+                    let possPeople=[]; //people you can ask
+                    let enemyTeam = (game.cotable.get(id)+1)%2;
+                    [enemyTeam, enemyTeam+2, enemyTeam+4].forEach(elem=>{
+                        if(game.cards[elem].length>0) possPeople.push(game.table.get(elem));
+                    });
+    
+                    let possCards=[]; //cards you can ask for
+                    let cards=game.cards[game.cotable.get(id)];
+                    let possHalfsuits=[];
+                    cards.forEach(elem=>{
+                        if (!possHalfsuits.includes(elem.halfsuit)) possHalfsuits.push(elem.halfsuit);
+                    });
+                    possHalfsuits.forEach(elem=>{
+                        [0,1,2,3,4,5].forEach(val=>{
+                            possCards.push({halfsuit: elem, value: val});
+                        })
                     })
-                })
-
-                let friendTeam = (game.cotable.get(id))%2;
-                let friends=[];
-                [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
-                   friends.push(game.table.get(item))
-                });
-
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1:game.won1, won2: game.won2, spectatorLen: game.spectators.length, host:game.host}
+    
+                    let friendTeam = (game.cotable.get(id))%2;
+                    let friends=[];
+                    [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
+                       friends.push(game.table.get(item))
+                    });
+    
+                    update={cards:game.cards[game.cotable.get(id)], turnid: turnid, possPeople: possPeople, possCards: possCards, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1:game.won1, won2: game.won2, spectatorLen: game.spectators.length, host:game.host}
+                }else{
+                    let friendTeam = (game.cotable.get(id))%2;
+                    let friends=[];
+                    [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
+                       friends.push(game.table.get(item));
+                    });
+                    update={cards:game.cards[game.cotable.get(id)], turnid: turnid, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1: game.won1, won2: game.won2, spectatorLen: game.spectators.length, host: game.host}
+                }
             }else{
-                let friendTeam = (game.cotable.get(id))%2;
-                let friends=[];
-                [friendTeam, friendTeam+2, friendTeam+4].forEach((item)=>{
-                   friends.push(game.table.get(item));
+                let fakeTable=[]; //if request is from a spectator
+                [0,1,2,3,4,5].forEach(elem => {
+                    fakeTable.push(game.nameMap.get(game.table.get(elem)) + ': ' + game.cards[elem].length.toString());
                 });
-                update={cards:game.cards[game.cotable.get(id)], turnid: turnid, halfsuits: game.halfsuits, team: friends, fakeTable:fakeTable, won1: game.won1, won2: game.won2, spectatorLen: game.spectators.length, host: game.host}
+                update={cards:[], turnid: turnid, fakeTable:fakeTable, won1: game.won1, won2: game.won2, spectatorLen: game.spectators.length, host: game.host, spectator: true}
             }
+            
             socket.emit('updateCards', update); //should also update the turn and possmoves and table
         }
     });
@@ -389,7 +405,14 @@ roomio.on('connection', (socket) => {
             roomio.in(room).emit('declared', {declarer: id, halfsuit: data.halfsuit, success: success});
             
             if(game.halfsuits.length===0){ //if game is over
-                roomio.in(room).emit('gameOver'); //add winner, scores, etc.
+                console.log(`ROOMIO: Game Over`)
+                let win;
+                if(game.score1>game.score2){
+                    win=1;
+                }else{
+                    win=2;
+                }
+                roomio.in(room).emit('gameOver', {win: win}); //add winner, scores, etc.
             }
         }else{
             console.log(`ROOMIO: IDs do not match`);
@@ -432,6 +455,11 @@ roomio.on('connection', (socket) => {
                     //restart the game and wait for players. move any spectators down to player. let people know who left. check for host
                     //if a player leaves and comes back, he becomes a spectator. fix that.
                     console.log(`ROOMIO: ${id} actually left during game`);
+                    if (game.spectators.includes(id)){
+                            game.players.splice(game.players.indexOf(id),1);
+                            game.spectators.splice(game.spectators.indexOf(id),1);
+                            roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+                    }
                 };
             }, 2000);
         };

@@ -1,6 +1,4 @@
 //index.js
-        
-
 let id = sessionStorage.getItem('id');
 let name;
 let room;

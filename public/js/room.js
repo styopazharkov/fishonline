@@ -1,11 +1,9 @@
+
 let room = sessionStorage.getItem('room');
 let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name');
 let host;
 let nameMap;
-
-$('.gridA').hide();
-$(".gridB").hide();
 
 //map functions:
 let cardMapFun = (card)=>{ //function maps card to card name. eg: {halfsuit: 3, value: 4} => '6D'
@@ -385,7 +383,7 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
     });
 
     $('.spectatorsDiv').empty();
-    $('.spectatorsDiv').append(`${data.spectatorLen} spectartors watching`)
+    $('.spectatorsDiv').append(`${data.spectatorLen} spectators watching`)
 
     $('.turnDiv').empty();
     if(data.turnid===id){
@@ -395,8 +393,10 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
         $('.turnDiv').append(`<p>Waiting on ${nameMap.get(data.turnid)} to move...</p>`)
     }
 
-    $('.declareDivDiv').empty();
-    $(".declareDivDiv").append(makeDeclareDiv(data.halfsuits, data.team))
+    if(!data.spectator){
+        $('.declareDivDiv').empty();
+        $(".declareDivDiv").append(makeDeclareDiv(data.halfsuits, data.team))
+    }
 });
 
 socket.on('moveMade',(data)=>{
@@ -422,3 +422,10 @@ socket.on('declared',(data)=>{
     socket.emit('getCards', {room: room, id:id});
 });
 
+socket.on('gameOver', data=>{
+    if(data.win===1){
+        swal(`Game Over`,`Team 1 won the game!`);
+    }else{
+        swal(`Game Over`,`Team 2 won the game!`);
+    }
+});

@@ -296,8 +296,7 @@ body {
 
 .team1scoreDiv, .team2scoreDiv{
     display: grid;
-    grid-template-rows: 20% 80%;
-    
+    grid-template-rows: 20% 80%; 
 }
 
 .team1scoreDiv p, .team2scoreDiv p{
@@ -306,6 +305,12 @@ body {
     align-items: center;
     font-size: smaller;
 }
+.team1scoreDiv h5, .team2scoreDiv h5{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 
 .logDiv p, .logDiv h4{
     margin-left: 10px;
