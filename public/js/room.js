@@ -438,5 +438,9 @@ socket.on('gameOver', data=>{
 });
 
 socket.on('gameAbandoned', data=>{
-    swal(`Game Abandoned`,`${nameMap.get(data.id)}, left during the game!`, 'warning');
+    swal(`Game Abandoned`,`${nameMap.get(data.id)} left during the game!`, 'warning');
+});
+
+socket.on('playerReplaced', data=>{
+    swal(`Game Abandoned`,`${nameMap.get(data.id)} left during the game and will be replaced by ${nameMap.get(data.replacement)}.`, 'info');
 });
