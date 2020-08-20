@@ -169,12 +169,12 @@ let makeMoveDiv = (possPeople, possCards) => {
     return moveDiv
 }
 
-let makeCard = (card)=>{
+let makeCard = (card, size)=>{
     let img = $('<img>', {
         class: 'card',
         src: "/card/"+cardMapFun(card)+".png",
         alt: cardMapFun(card),
-        height: '85%'
+        height: size
     });
     return img;
 }
@@ -284,6 +284,7 @@ socket.on('connect', ()=>{
     
 });
 socket.on('updatePlayers', (data)=>{
+    console.log(data.players)
     //socket.io cant emit maps so we convert it to a string and then back
     //all of this only if game hasnt started. if it has started, remove grid1, unhide grid2 (?), ask for cards
     if(!data.started){
@@ -336,6 +337,7 @@ socket.on('updatePlayers', (data)=>{
         }
     } else { //game has started
         if(data.players.includes(id)){
+            console.log('asking for cards here')
             $("title").html(`Fish Online - ${name}`);
             nameMap = new Map(JSON.parse(data.transitMapString));
             console.log(`user joined while game is started`)
@@ -363,9 +365,19 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
     $('.hostB').html(`Host: ${nameMap.get(data.host)}`)
 
     $('.cardsDiv').empty();
-    data.cards.forEach(item=>{
-        $('.cardsDiv').append(makeCard(item));
-    })
+    if(data.cards.length>14){
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '50%'));
+        })
+    }else if(data.cards.length>11){
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '70%'));
+        })
+    }else{
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '85%'));
+        })
+    }
 
     for(let i=0; i<6; i++){
         $('.name'+i.toString()).html(data.fakeTable[i]);
@@ -382,12 +394,11 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
         $('.team2score').append(`<p>${halfsuitMapFun(elem)}</p>`);
     });
 
-    $('.spectatorsDiv').empty();
-    $('.spectatorsDiv').append(`${data.spectatorLen} spectators watching`)
+    $('.spectatorsDivB').empty();
+    $('.spectatorsDivB').append(`${data.spectatorLen} spectators watching`)
 
     $('.turnDiv').empty();
     if(data.turnid===id){
-        console.log(`TEST: making move div`);
         $('.turnDiv').append(makeMoveDiv(data.possPeople, data.possCards));
     } else {
         $('.turnDiv').append(`<p>Waiting on ${nameMap.get(data.turnid)} to move...</p>`)
@@ -423,9 +434,9 @@ socket.on('declared',(data)=>{
 });
 
 socket.on('gameOver', data=>{
-    if(data.win===1){
-        swal(`Game Over`,`Team 1 won the game!`);
-    }else{
-        swal(`Game Over`,`Team 2 won the game!`);
-    }
+    swal(`Game Over`,`${nameMap.get(data.winners[0])}, ${nameMap.get(data.winners[1])}, and ${nameMap.get(data.winners[2])} won the game ${data.score[0]} to ${data.score[1]}!`);
+});
+
+socket.on('gameAbandoned', data=>{
+    swal(`Game Abandoned`,`${nameMap.get(data.id)}, left during the game!`, 'warning');
 });

@@ -402,17 +402,48 @@ roomio.on('connection', (socket) => {
             }
             game.halfsuits.splice(game.halfsuits.indexOf(data.halfsuit), 1);
 
-            roomio.in(room).emit('declared', {declarer: id, halfsuit: data.halfsuit, success: success});
             
             if(game.halfsuits.length===0){ //if game is over
                 console.log(`ROOMIO: Game Over`)
-                let win;
+                let winners;
+                let score;
                 if(game.score1>game.score2){
-                    win=1;
+                    winners=game.team1;
+                    score=[game.score1, game.score2];
                 }else{
-                    win=2;
+                    winners=game.team2;
+                    score=[game.score2, game.score1];
                 }
-                roomio.in(room).emit('gameOver', {win: win}); //add winner, scores, etc.
+                roomio.in(room).emit('gameOver', {winners: winners, score: score}); //add winner, scores, etc.
+                rooms.set(room, 
+                    {connected: game.connected, 
+                    nameMap: game.nameMap, 
+                    room: room, 
+                    host: game.host, 
+                    players: game.players, 
+                    team1: game.team1, 
+                    team2: game.team2, 
+                    spectators: game.spectators, 
+                    turn: 0, 
+                    cards: [[],[],[],[],[],[]],
+                    started: false,
+                    table: null,
+                    cotable: null,
+                    halfsuits: [0,1,2,3,4,5,6,7,8],
+                    score1: 0,
+                    won1: [],
+                    score2: 0,
+                    won2: [],
+                    pastMoves: []
+                    }
+                );
+
+                game=rooms.get(room)
+                let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+
+            }else{//if this isnt the end of the game
+                roomio.in(room).emit('declared', {declarer: id, halfsuit: data.halfsuit, success: success});
             }
         }else{
             console.log(`ROOMIO: IDs do not match`);
@@ -424,7 +455,7 @@ roomio.on('connection', (socket) => {
             game.connected.delete(id);
             setTimeout(()=>{
                 //makes it so that people can reload without losing progress. they have 2 seconds 
-                if(game.connected.has(id)){
+                if(game.connected.has(id)){ //if the person came back in time
                     console.log(`ROOMIO: ${id} came back`);
                 } else if(!game.started){ //if game hasnt started
                     if(game.host===id){
@@ -439,7 +470,7 @@ roomio.on('connection', (socket) => {
                             roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
                         }else{
                             rooms.delete(room);
-                            console.log(`ROOMIO: ${id} (the host) actually left, room ${room} deleted`);
+                            console.log(`ROOMIO: ${id} (the host) actually left and there are no replacements, room ${room} deleted`);
                         };
                     } else{
                         game.players.splice(game.players.indexOf(id),1);
@@ -454,11 +485,68 @@ roomio.on('connection', (socket) => {
                 }else{ //if game has started
                     //restart the game and wait for players. move any spectators down to player. let people know who left. check for host
                     //if a player leaves and comes back, he becomes a spectator. fix that.
-                    console.log(`ROOMIO: ${id} actually left during game`);
                     if (game.spectators.includes(id)){
+                        game.players.splice(game.players.indexOf(id),1);
+                        game.spectators.splice(game.spectators.indexOf(id),1);
+                        roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+                        console.log(`ROOMIO: Spectator left during the game`)
+                    } else if(game.players.includes(id)){
+                        if(game.spectators.length>0){
                             game.players.splice(game.players.indexOf(id),1);
-                            game.spectators.splice(game.spectators.indexOf(id),1);
+                            if(game.team1.includes(id)){
+                                game.team1[game.team1.indexOf(id)]=game.spectators.splice(0,1);
+                            }else if (game.team2.includes(id)){
+                                game.team2[game.team2.indexOf(id)]=game.spectators.splice(0,1);
+                            }
+                            let transitMapString = JSON.stringify(Array.from(game.nameMap));
                             roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+                        }else{//if someone left during the game and there are no spectators to replace them
+                            console.log(`ROOMIO: ${id} actually left the room and there are no spectator replacements`)
+                            if(game.host===id){//host left the room during game with no replacements
+                                if(game.players.length>1){//host is not the last one left
+                                    game.players.splice(game.players.indexOf(id),1);
+                                    if (game.team1.includes(id)) game.team1.splice(game.team1.indexOf(id),1);
+                                    if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
+                                    game.host=game.players[0]
+                                    console.log(`ROOMIO: ${id} (the host) actually left, ${game.host} is the new host`);
+                                }else{//host is the last one left
+                                    rooms.delete(room);
+                                    console.log(`ROOMIO: ${id} (the host) actually left and there are no player replacements, room ${room} deleted`);
+                                };
+                            }else{//non-host left the room with no replacements
+                                game.players.splice(game.players.indexOf(id),1);
+                                if (game.team1.includes(id)) game.team1.splice(game.team1.indexOf(id),1);
+                                if (game.team2.includes(id)) game.team2.splice(game.team2.indexOf(id),1);
+                            }
+
+                            roomio.in(room).emit('gameAbandoned', {id: id}); //add winner, scores, etc.
+                            rooms.set(room, 
+                                {connected: game.connected, 
+                                nameMap: game.nameMap, 
+                                room: room, 
+                                host: game.host, 
+                                players: game.players, 
+                                team1: game.team1, 
+                                team2: game.team2, 
+                                spectators: game.spectators, 
+                                turn: 0, 
+                                cards: [[],[],[],[],[],[]],
+                                started: false,
+                                table: null,
+                                cotable: null,
+                                halfsuits: [0,1,2,3,4,5,6,7,8],
+                                score1: 0,
+                                won1: [],
+                                score2: 0,
+                                won2: [],
+                                pastMoves: []
+                                }
+                            );
+
+                            game=rooms.get(room)
+                            let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                            roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+                        }
                     }
                 };
             }, 2000);
