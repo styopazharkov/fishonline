@@ -97,6 +97,10 @@ indexio.on('connection', (socket) => {
 
 
     socket.on('createRoom', (data)=>{
+        if(!data.name.match(/^[A-Za-z]+$/) || data.name.length>11 || !data.name || !data.room.match(/^[A-Za-z]+$/) || data.room.length!==4){ //server name & room verification
+            console.log(`INDEXIO: [ERROR] invalid room: ${data.room} or name: ${data.name}`);
+            return;
+        }
         console.log(`INDEXIO: [ROOM CREATED]: ${data.room} by ${data.id}, name: ${data.name}`);
         let nameMap = new Map();
         nameMap.set(data.id, data.name);
@@ -146,6 +150,11 @@ joinio.on('connection', (socket) => {
 
     socket.on('requestJoin', (data)=>{
         // insert to let user know that this isnt a room
+        if(!data.name.match(/^[A-Za-z]+$/) || data.name.length>11 || !data.name || !data.room.match(/^[A-Za-z]+$/) || data.room.length!==4){ //server name & room verification
+            console.log(`JOINIO: [ERROR] invalid room: ${data.room} or name: ${data.name}`);
+            return;
+        }
+
         if(rooms.has(data.room)){
             console.log(`JOINIO: [ROOM APPROVED]: ${data.room} to ${data.id, data.name}`);
             room = data.room
@@ -187,6 +196,10 @@ roomio.on('connection', (socket) => {
         name = data.name;
         room = data.room;
         console.log(`${room}: a user gave info: id: ${id}, name: ${name}`);
+        if(!name.match(/^[A-Za-z]+$/) || name.length>11 || !name || !room.match(/^[A-Za-z]+$/) || room.length!==4){ //server name & room verification
+            console.log(`ROOMIO: [ERROR] invalid room: ${room} or name: ${name}`);
+            return;
+        }
 
         if(rooms.has(room)){
             let game=rooms.get(room);
@@ -209,9 +222,11 @@ roomio.on('connection', (socket) => {
 
                 //if game has started, emit updatecards
             }else{
+                console.log(`${room}: ${id}, ${name} tried accessing a game they are not part of`);
                 socket.emit('requestAns', {ans: false, msg: `${id} not in players: ${game.players}`});
             };
         }else{
+            console.log(`${room}: ${id}, ${name} tried accessing nonexisting game`);
             socket.emit('requestAns', {ans: false, msg: "no such game"});
         };
     });
@@ -562,7 +577,7 @@ roomio.on('connection', (socket) => {
                         }
                     }
                 };
-            }, 2000); //2 second timeout
+            }, 3000); //2 second timeout
         };
     });
 })
