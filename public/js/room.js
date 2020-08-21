@@ -336,6 +336,18 @@ socket.on('updatePlayers', (data)=>{
             }
         }
     } else { //game has started
+        //draw table:
+        let tableImg= $('<img>',{
+            src: "/table",
+            alt: "image of table for fish online",
+            width: '90%'
+        })
+        $('.table').append(tableImg);
+
+        $('.team1scoreDiv h5').html('Team 1 points:');
+        $('.team2scoreDiv h5').html('Team 2 points:');
+        $('.logDiv h4').html('Past Moves:');
+
         if(data.players.includes(id)){
             console.log('asking for cards here')
             $("title").html(`Fish Online - ${name}`);
