@@ -97,14 +97,6 @@ indexio.on('connection', (socket) => {
 
 
     socket.on('createRoom', (data)=>{
-        console.log(!data.name.match(/^[A-Za-z]+$/))
-        console.log(data.name.length>11)
-        console.log(!data.name)
-        console.log(!data.room.match(/^[A-Za-z]+$/))
-        console.log(data.room.length!==4)
-        console.log(typeof data.name)
-        console.log(typeof data.room)
-
         if((!data.name.match(/^[A-Za-z]+$/)) || (data.name.length>11) || (!data.name) || (!data.room.match(/^[A-Za-z]+$/)) || (data.room.length!==4)){ //server name & room verification
             console.log(`INDEXIO: [ERROR] invalid room: ${data.room} or name: ${data.name}`);
             return;
@@ -158,7 +150,7 @@ joinio.on('connection', (socket) => {
 
     socket.on('requestJoin', (data)=>{
         // insert to let user know that this isnt a room
-        if(!data.name.match(/^[A-Za-z]+$/) || data.name.length>11 || !data.name || !data.room.match(/^[A-Za-z]+$/) || data.room.length!==4){ //server name & room verification
+        if((!data.name.match(/^[A-Za-z]+$/)) || (data.name.length>11) || (!data.name) || (!data.room.match(/^[A-Za-z]+$/)) || (data.room.length!==4)){ //server name & room verification
             console.log(`JOINIO: [ERROR] invalid room: ${data.room} or name: ${data.name}`);
             return;
         }
@@ -198,14 +190,13 @@ roomio.on('connection', (socket) => {
     var id;
     var name;
     var room;
-    let fraud=false;
 
     socket.on('tellInfoAndRequest', (data)=>{
         id = data.id;
         name = data.name;
         room = data.room;
         console.log(`${room}: a user gave info: id: ${id}, name: ${name}`);
-        if(!name.match(/^[A-Za-z]+$/) || name.length>11 || !name || !room.match(/^[A-Za-z]+$/) || room.length!==4){ //server name & room verification
+        if((!name.match(/^[A-Za-z]+$/)) || (name.length>11) || (!name) || (!room.match(/^[A-Za-z]+$/)) || (room.length!==4)){ //server name & room verification
             console.log(`ROOMIO: [ERROR] invalid room: ${room} or name: ${name}`);
             return;
         }
