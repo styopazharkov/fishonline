@@ -76,5 +76,5 @@ $('.create').click(() =>{
         }else{
             location.href = '/';
         }
-    } //add elese statement to tell user why name doesnt work
+    }
 });

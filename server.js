@@ -97,7 +97,15 @@ indexio.on('connection', (socket) => {
 
 
     socket.on('createRoom', (data)=>{
-        if(!data.name.match(/^[A-Za-z]+$/) || data.name.length>11 || !data.name || !data.room.match(/^[A-Za-z]+$/) || data.room.length!==4){ //server name & room verification
+        console.log(!data.name.match(/^[A-Za-z]+$/))
+        console.log(data.name.length>11)
+        console.log(!data.name)
+        console.log(!data.room.match(/^[A-Za-z]+$/))
+        console.log(data.room.length!==4)
+        console.log(typeof data.name)
+        console.log(typeof data.room)
+
+        if((!data.name.match(/^[A-Za-z]+$/)) || (data.name.length>11) || (!data.name) || (!data.room.match(/^[A-Za-z]+$/)) || (data.room.length!==4)){ //server name & room verification
             console.log(`INDEXIO: [ERROR] invalid room: ${data.room} or name: ${data.name}`);
             return;
         }
@@ -190,6 +198,7 @@ roomio.on('connection', (socket) => {
     var id;
     var name;
     var room;
+    let fraud=false;
 
     socket.on('tellInfoAndRequest', (data)=>{
         id = data.id;
