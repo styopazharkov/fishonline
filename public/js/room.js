@@ -107,6 +107,16 @@ let startButton = () => { return $("<button>", { //button to start game
     }
 });}
 
+let shuffleButton = () => { return $("<button>", { //button to start game
+    text: 'Shuffle Teams',
+    class: 'shuffleButton',
+    click: () => {
+        console.log(`ROOM: teams shuffled`)
+        socket.emit('shuffle', {id: id, room: room})
+    }
+});}
+
+
 let makePossPeopleDropdown = (possPeople)=>{ //dropdown to select person to ask. ugly
     let possPeopleDropdown=$('<select>',{
         class: 'possPeopleDropdown'
@@ -327,6 +337,12 @@ socket.on('updatePlayers', (data)=>{
         data.spectators.forEach(item=>{
             $('.spectators').append(`<li>${nameMap.get(item)}</li>`) //spectators box
         });
+
+        $(".shuffleButtonDiv").empty();
+        if(host==id){
+            $('.shuffleButtonDiv').append(shuffleButton());
+        }
+
         $(".startButtonDiv").empty();
         if(data.players.length>=6){
             if(host===id){

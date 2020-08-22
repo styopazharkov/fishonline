@@ -231,11 +231,46 @@ roomio.on('connection', (socket) => {
         };
     });
 
+    socket.on('shuffle', data=>{ //shuffles the teams
+        console.log(`${room} [SHUFFLE] requested by ${data.id}`)
+        let game = rooms.get(data.room);
+        if(game.host===id && id===data.id && game.started===false){
+            let _team1=[];
+            let _team2=[];
+            let _playing=(game.team1).concat(game.team2);
+            console.log(_playing)
+            while((_team1.length<3 || _team2.length<3)&&_playing.length>0){
+                let coinFlip=Math.floor((Math.random() * 2));
+                if(coinFlip===0){
+                    console.log('coin0')
+                    if(_team1.length<3){
+                        console.log('coin0suc')
+                        let player=_playing.splice(0,1)[0];
+                        _team1.push(player)
+                    }
+                }else{
+                    console.log('coin1')
+                    if(_team2.length<3){
+                        console.log('coin1suc')
+                        let player=_playing.splice(0,1)[0];
+                        _team2.push(player)
+                    }
+                }
+            }
+            console.log(`1: ${_team1}, 2: ${_team2}, players: ${_playing}`)
+            game.team1=_team1;
+            game.team2=_team2;
+
+            let transitMapString = JSON.stringify(Array.from(game.nameMap));
+                roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
+
+        }
+    })
     socket.on('startGame',(data) =>{
         console.log(`${room}: [START GAME] requested by ${data.id}`)
         let game = rooms.get(data.room);
         //verification of host and player number
-        if(game.host===id && id===data.id && game.players.length>=6){
+        if(game.host===id && id===data.id && game.players.length>=6 && game.started===false){
             //make sure that every player is connected, maybe just send back to lobby if game is stopped and not enough players
 
             //make table and cotable
