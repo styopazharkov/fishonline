@@ -201,6 +201,12 @@ body {
     margin: 5px;
 }
 
+.card:hover{
+    margin: 3px;
+    border: 2px solid #ffbbbb;
+    border-radius: 6px;
+}
+
 .declareDiv{
     height: 100%;
     width: 100%;

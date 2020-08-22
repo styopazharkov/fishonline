@@ -238,26 +238,20 @@ roomio.on('connection', (socket) => {
             let _team1=[];
             let _team2=[];
             let _playing=(game.team1).concat(game.team2);
-            console.log(_playing)
             while((_team1.length<3 || _team2.length<3)&&_playing.length>0){
                 let coinFlip=Math.floor((Math.random() * 2));
                 if(coinFlip===0){
-                    console.log('coin0')
                     if(_team1.length<3){
-                        console.log('coin0suc')
                         let player=_playing.splice(0,1)[0];
                         _team1.push(player)
                     }
                 }else{
-                    console.log('coin1')
                     if(_team2.length<3){
-                        console.log('coin1suc')
                         let player=_playing.splice(0,1)[0];
                         _team2.push(player)
                     }
                 }
             }
-            console.log(`1: ${_team1}, 2: ${_team2}, players: ${_playing}`)
             game.team1=_team1;
             game.team2=_team2;
 
@@ -317,6 +311,30 @@ roomio.on('connection', (socket) => {
         }else{
             //tell host why game start failed
             console.log(`${room}: ERROR: game start failed: not host or not enough players host: ${game.host}, id: ${id}, data.id: ${data.id}, numplayers: ${game.players.length}`)
+        }
+    });
+
+    socket.on('switchCards', data=>{
+        let game=rooms.get(room);
+        if(id===data.id){
+            let turn=game.cotable.get(id)
+            let ind1=0, ind2=0;
+            let cards = game.cards[turn]
+            cards.forEach(item=>{
+                if(item.value===data.card1.value && item.halfsuit===data.card1.halfsuit){
+                    ind1=cards.indexOf(item);
+                }
+                if(item.value===data.card2.value && item.halfsuit===data.card2.halfsuit){
+                    ind2=cards.indexOf(item);
+                }
+            })
+            let temp = cards[ind2];
+            cards[ind2]=cards[ind1];
+            cards[ind1]=temp;
+
+            socket.emit('updateCardsOnly', {cards: cards});
+        }else{
+            console.log(`${room}: [ERROR] switch requested not by owner`)
         }
     });
 

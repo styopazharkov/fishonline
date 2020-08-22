@@ -4,6 +4,7 @@ let id = sessionStorage.getItem('id');
 let name=sessionStorage.getItem('name');
 let host;
 let nameMap;
+let selectedCard = false;
 
 //map functions:
 let cardMapFun = (card)=>{ //function maps card to card name. eg: {halfsuit: 3, value: 4} => '6D'
@@ -181,10 +182,22 @@ let makeMoveDiv = (possPeople, possCards) => {
 
 let makeCard = (card, size)=>{
     let img = $('<img>', {
-        class: 'card',
+        class: 'card card'+cardMapFun(card),
         src: "/card/"+cardMapFun(card)+".png",
         alt: cardMapFun(card),
-        height: size
+        height: size,
+        click: ()=>{
+            console.log(`ROOM: card selected`)
+            $('.card'+cardMapFun(card)).css('border', '2px solid red')
+            $('.card'+cardMapFun(card)).css('border-radius', '6px')
+            $('.card'+cardMapFun(card)).css('margin', '3px')
+            if(selectedCard){
+                socket.emit('switchCards', {id: id, card1: card, card2: selectedCard})
+                selectedCard=false;
+            }else{
+                selectedCard=card;
+            }
+        }
     });
     return img;
 }
@@ -438,7 +451,25 @@ socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need t
     }
 });
 
+socket.on('updateCardsOnly', data=>{
+    $('.cardsDiv').empty();
+    if(data.cards.length>14){
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '50%'));
+        })
+    }else if(data.cards.length>11){
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '70%'));
+        })
+    }else{
+        data.cards.forEach(item=>{
+            $('.cardsDiv').append(makeCard(item, '85%'));
+        })
+    }
+})
+
 socket.on('moveMade',(data)=>{
+    selectedCard=false;
     $('.logDiv').empty()
     $('.logDiv').append('<h4>Past moves:</h4>')
     data.forEach(elem => {
@@ -453,6 +484,7 @@ socket.on('moveMade',(data)=>{
 });
 
 socket.on('declared',(data)=>{
+    selectedCard=false;
     if (data.success){
         $('.logDiv').append(`<p>${nameMap.get(data.declarer)} successfully declared ${halfsuitMapFun(data.halfsuit)}</p>`);
     } else{
