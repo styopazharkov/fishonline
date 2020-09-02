@@ -560,6 +560,7 @@ roomio.on('connection', (socket) => {
                     if (game.spectators.includes(id)){
                         game.players.splice(game.players.indexOf(id),1);
                         game.spectators.splice(game.spectators.indexOf(id),1);
+                        let transitMapString = JSON.stringify(Array.from(game.nameMap));
                         roomio.in(room).emit('updatePlayers', {players: game.players, team1:game.team1, team2: game.team2, spectators: game.spectators, host: game.host, transitMapString: transitMapString, started: game.started, spectatorLen: game.spectators.length})
                         console.log(`${room}: ${id}, ${name} (a spectator) actually left during the game`);
                     } else if(game.players.includes(id)){
