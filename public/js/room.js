@@ -366,6 +366,7 @@ socket.on('updatePlayers', (data)=>{
         }
     } else { //game has started
         //draw table:
+        $('.table').empty();
         let tableImg= $('<img>',{
             src: "/table",
             alt: "image of table for fish online",
@@ -396,7 +397,13 @@ socket.on('gameStarted', (data)=>{
     if(data.players.includes(id)){
         socket.emit('getCards', {room: room, id:id})
     }
-
+    $('.table').empty();
+        let tableImg= $('<img>',{
+            src: "/table",
+            alt: "image of table for fish online",
+            width: '90%'
+        })
+    $('.table').append(tableImg);
 });
 
 socket.on('updateCards', (data)=>{ //if page is reloaded, this wont show. need to fix
