@@ -3,8 +3,7 @@ A website for playing the 6-player game 'Fish' online.
 
 Visit the website at [fishonline.herokuapp.com](fishonline.herokuapp.com)
 
-Rules to Fish:
-(also called Canadian Fish and Literature)
+**Rules to Fish (also called Canadian Fish and Literature):**
 
 Overview:
 Number of players: 6
