@@ -47,7 +47,9 @@ If it is a players turn and they do not have any cards, the turn is passed on to
 If a team has no cards, the other team must declare all of the halfsuits left within them.
 If a team violates a rule (communicates, asks for a card theycant ask for, lies about having a card, etc.), the halfsuit associated with that play is won by the enemy team.
 How to Use this Website:
-This website allows you and your friends to play fish online. There are some things you should know before using this website:
+This website allows you and your friends to play fish online. 
+
+**There are some things you should know before using this website:**
 
 When asking for cards, card abbreviations are used. The value of the card is followed by the first letter of the suit of the card . So King of Hearts is abbreviated as 'KH'. The red and black jokers are 'XR' and 'XB' respectively.
 The options when asking for a card are already limited to only the cards you can ask for to reduce mistakes.
